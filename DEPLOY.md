@@ -106,3 +106,44 @@ Keeps the last 14 daily snapshots in `data/backups/`.
 - **"Insecure production config" error on startup** — you forgot SECRET_KEY or ADMIN_EMAILS in `.env`. That error is on purpose: it refuses to boot unsafely.
 - **Google button does nothing** — origin not added in Google Cloud Console (step 5).
 - **500 on first request** — check the error log link on the Web tab; usually a missing package (`pip3 install --user -r requirements.txt`).
+
+---
+
+# Updating after you're live
+
+There are two kinds of changes, and they work very differently.
+
+## A) Content changes — NO redeploy needed
+Adding courses, uploading module PDFs, posting assignments/exams/announcements,
+adding or removing topics: do it **live in the `/admin` panel** on your site.
+Changes appear instantly. This is ~95% of what you'll ever do.
+
+## B) Code / design changes — edit → upload → reload
+For editing HTML/CSS/JS or Python (e.g. tweak the GPA scale, colours, add a feature):
+
+1. Edit the file on your computer.
+2. Get it onto the server, either:
+   - **Git (recommended):** commit + push locally, then in a PythonAnywhere **Bash console**:
+     ```
+     cd ~/csbs-portal && git pull
+     ```
+   - **Or upload:** Files tab → upload the changed file(s), overwriting the old ones.
+3. **Web tab → Reload.** The change is live.
+
+## ⚠️ Never overwrite these on the server when updating code
+They hold your live data and secrets:
+- `data/portal.db` — all your courses, topics, assignments, exams
+- `static/uploads/` — uploaded PDFs
+- `.env` — your secrets
+
+`.gitignore` already excludes all three, so **`git pull` is always safe** — it only
+touches code, never your data. (This is the big reason to use Git over re-uploading.)
+
+## Backing up your live content
+Anytime, download `data/portal.db` from the server (Files tab) — that single file is
+your entire portal's content. `backup_db.py` (daily task) also keeps 14 rolling snapshots.
+
+## Server vs local reminder
+Once live, the **server's** database is the real one (it has everything you added via
+the admin panel). Your laptop's copy will fall behind — that's fine and expected.
+Only push *code* up; pull the *db* down if you want a backup.

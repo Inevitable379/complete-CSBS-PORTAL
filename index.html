@@ -56,6 +56,9 @@
                 <button class="sidebar-item" data-section="attendance" onclick="navigate('attendance')">
                     <i class="fas fa-chart-bar"></i><span>Attendance</span>
                 </button>
+                <button class="sidebar-item" data-section="gpa" onclick="navigate('gpa')">
+                    <i class="fas fa-calculator"></i><span>GPA Calculator</span>
+                </button>
             </div>
             <div class="sidebar-bottom">
                 <button class="sidebar-item hidden" id="admin-link" onclick="window.location.href='/admin'">
@@ -324,6 +327,56 @@
                                 </thead>
                                 <tbody id="attendance-tbody"></tbody>
                             </table>
+                        </div>
+                    </section>
+
+                    <!-- ===== GPA CALCULATOR ===== -->
+                    <section id="section-gpa" class="page-section">
+                        <div class="section-header">
+                            <h2 class="section-title">GPA Calculator</h2>
+                            <div class="gpa-scale-hint text-caption">Jain 10-point scale · O=10, A+=9, A=8, B+=7, B=6, C=5, P=4, F=0</div>
+                        </div>
+
+                        <!-- CGPA summary -->
+                        <div class="gpa-cgpa-card" id="gpa-cgpa-card">
+                            <div class="gpa-cgpa-main">
+                                <span class="gpa-cgpa-label">Cumulative CGPA</span>
+                                <span class="gpa-cgpa-value" id="gpa-cgpa-value">—</span>
+                                <span class="gpa-cgpa-sub" id="gpa-cgpa-sub">Fill in a semester below to begin</span>
+                            </div>
+                            <div class="gpa-cgpa-breakdown" id="gpa-cgpa-breakdown"></div>
+                        </div>
+
+                        <!-- Semester picker -->
+                        <div class="filter-bar" id="gpa-sem-tabs" style="margin-top:var(--sp-6)"></div>
+
+                        <!-- Input mode toggle -->
+                        <div class="gpa-toolbar">
+                            <div class="gpa-mode-toggle">
+                                <button class="gpa-mode-btn active" id="gpa-mode-marks" onclick="setGpaMode('marks')"><i class="fas fa-percent"></i> Enter Marks</button>
+                                <button class="gpa-mode-btn" id="gpa-mode-grade" onclick="setGpaMode('grade')"><i class="fas fa-a"></i> Pick Grade</button>
+                            </div>
+                            <button class="btn-ghost" onclick="resetGpaSemester()" title="Clear this semester"><i class="fas fa-rotate-left"></i> Reset semester</button>
+                        </div>
+
+                        <!-- Course rows -->
+                        <div class="gpa-table-wrap">
+                            <div class="gpa-rows" id="gpa-rows"></div>
+                        </div>
+
+                        <!-- SGPA result -->
+                        <div class="gpa-sgpa-bar" id="gpa-sgpa-bar">
+                            <div>
+                                <span class="text-caption">Semester SGPA</span>
+                                <span class="gpa-sgpa-value" id="gpa-sgpa-value">—</span>
+                            </div>
+                            <div class="gpa-sgpa-meta" id="gpa-sgpa-meta"></div>
+                        </div>
+
+                        <div class="empty-state hidden" id="gpa-empty">
+                            <i class="fas fa-calculator"></i>
+                            <h3>No courses in this semester yet</h3>
+                            <p>Once courses are added for this semester, they'll appear here to grade.</p>
                         </div>
                     </section>
 

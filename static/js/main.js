@@ -66,7 +66,8 @@ function navigate(section) {
         projects: '<i class="fas fa-diagram-project"></i> Projects',
         announcements: '<i class="fas fa-bullhorn"></i> Announcements',
         schedule: '<i class="fas fa-calendar"></i> Schedule',
-        attendance: '<i class="fas fa-chart-bar"></i> Attendance'
+        attendance: '<i class="fas fa-chart-bar"></i> Attendance',
+        gpa: '<i class="fas fa-calculator"></i> GPA Calculator'
     };
     document.getElementById('page-title').innerHTML = titles[section] || section;
 
@@ -106,6 +107,7 @@ function loadSection(section) {
         case 'announcements': loadAnnouncements(); break;
         case 'schedule': loadSchedule(); break;
         case 'attendance': loadAttendance(); break;
+        case 'gpa': loadGpa(); break;
     }
 }
 
@@ -983,7 +985,199 @@ function timeAgo(dateStr) {
     return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
 }
 
+// ── GPA Calculator ──────────────────────────────
+// Jain University 10-point absolute scale
+const GPA_GRADES = [
+    { g: 'O',  p: 10, min: 90 },
+    { g: 'A+', p: 9,  min: 80 },
+    { g: 'A',  p: 8,  min: 70 },
+    { g: 'B+', p: 7,  min: 60 },
+    { g: 'B',  p: 6,  min: 55 },
+    { g: 'C',  p: 5,  min: 50 },
+    { g: 'P',  p: 4,  min: 40 },
+    { g: 'F',  p: 0,  min: 0  }
+];
 
+let gpaSem = null;
+let gpaMode = localStorage.getItem('csbs_gpa_mode') || 'marks';
+
+function marksToGrade(marks) {
+    const m = Math.max(0, Math.min(100, Number(marks)));
+    return GPA_GRADES.find(x => m >= x.min) || GPA_GRADES[GPA_GRADES.length - 1];
+}
+
+function getGpaStore() { return JSON.parse(localStorage.getItem('csbs_gpa') || '{}'); }
+function setGpaStore(s) { localStorage.setItem('csbs_gpa', JSON.stringify(s)); }
+
+function entryPoint(entry) {
+    if (!entry) return null;
+    if (entry.mode === 'grade') return typeof entry.grade === 'number' ? entry.grade : null;
+    if (entry.marks === '' || entry.marks == null) return null;
+    return marksToGrade(entry.marks).p;
+}
+
+async function loadGpa() {
+    if (!modulesData.length) {
+        try { modulesData = await fetchJSON('/api/modules'); }
+        catch (e) { showToast('Failed to load courses', 'error'); return; }
+    }
+    const sems = [...new Set(modulesData.map(c => c.semester || 1))].sort((a, b) => a - b);
+    if (!sems.length) return;
+    if (gpaSem === null || !sems.includes(gpaSem)) {
+        const saved = parseInt(localStorage.getItem('csbs_gpa_sem'));
+        gpaSem = sems.includes(saved) ? saved : sems[0];
+    }
+    document.getElementById('gpa-mode-marks').classList.toggle('active', gpaMode === 'marks');
+    document.getElementById('gpa-mode-grade').classList.toggle('active', gpaMode === 'grade');
+    buildGpaSemTabs(sems);
+    renderGpaRows();
+    renderCgpa();
+}
+
+function buildGpaSemTabs(sems) {
+    document.getElementById('gpa-sem-tabs').innerHTML = sems.map(s =>
+        `<button class="filter-pill ${s === gpaSem ? 'active' : ''}" onclick="selectGpaSem(${s})">Sem ${s}</button>`
+    ).join('');
+}
+
+function selectGpaSem(sem) {
+    gpaSem = sem;
+    localStorage.setItem('csbs_gpa_sem', sem);
+    loadGpa();
+}
+
+function setGpaMode(mode) {
+    gpaMode = mode;
+    localStorage.setItem('csbs_gpa_mode', mode);
+    document.getElementById('gpa-mode-marks').classList.toggle('active', mode === 'marks');
+    document.getElementById('gpa-mode-grade').classList.toggle('active', mode === 'grade');
+    renderGpaRows();
+}
+
+function renderGpaRows() {
+    const rows = document.getElementById('gpa-rows');
+    const empty = document.getElementById('gpa-empty');
+    const bar = document.getElementById('gpa-sgpa-bar');
+    const courses = modulesData.filter(c => (c.semester || 1) === gpaSem);
+
+    if (!courses.length) {
+        rows.innerHTML = '';
+        empty.classList.remove('hidden');
+        bar.style.display = 'none';
+        return;
+    }
+    empty.classList.add('hidden');
+    bar.style.display = 'flex';
+
+    const semStore = getGpaStore()[gpaSem] || {};
+
+    rows.innerHTML = courses.map(c => {
+        const entry = semStore[c.id] || {};
+        const credits = c.credits || 0;
+        let inputHtml;
+        if (gpaMode === 'marks') {
+            const val = (entry.mode !== 'grade' && entry.marks != null) ? entry.marks : '';
+            const gr = val !== '' ? marksToGrade(val) : null;
+            inputHtml = `
+                <input type="number" class="gpa-marks-input" min="0" max="100" placeholder="—"
+                    value="${esc(val)}" oninput="onGpaMarks(${c.id}, this.value)">
+                <span class="gpa-row-grade ${gr ? '' : 'muted'}">${gr ? gr.g + ' · ' + gr.p : '—'}</span>`;
+        } else {
+            const cur = entry.mode === 'grade' ? entry.grade : null;
+            const opts = GPA_GRADES.map(x => `<option value="${x.p}" ${cur === x.p ? 'selected' : ''}>${x.g} (${x.p})</option>`).join('');
+            inputHtml = `
+                <select class="gpa-grade-select" onchange="onGpaGrade(${c.id}, this.value)">
+                    <option value="" ${cur == null ? 'selected' : ''}>—</option>${opts}
+                </select>`;
+        }
+        return `<div class="gpa-row">
+            <div class="gpa-row-info">
+                <span class="gpa-row-title">${esc(c.title)}</span>
+                <span class="gpa-row-code">${esc(c.code)}</span>
+            </div>
+            <span class="gpa-row-credits">${credits} <small>cr</small></span>
+            <div class="gpa-row-input">${inputHtml}</div>
+        </div>`;
+    }).join('');
+
+    renderSgpa();
+}
+
+function onGpaMarks(courseId, value) {
+    const store = getGpaStore();
+    if (!store[gpaSem]) store[gpaSem] = {};
+    if (value === '') delete store[gpaSem][courseId];
+    else store[gpaSem][courseId] = { mode: 'marks', marks: Math.max(0, Math.min(100, Number(value))) };
+    setGpaStore(store);
+    renderGpaRows();
+    renderCgpa();
+}
+
+function onGpaGrade(courseId, value) {
+    const store = getGpaStore();
+    if (!store[gpaSem]) store[gpaSem] = {};
+    if (value === '') delete store[gpaSem][courseId];
+    else store[gpaSem][courseId] = { mode: 'grade', grade: Number(value) };
+    setGpaStore(store);
+    renderSgpa();
+    renderCgpa();
+}
+
+function computeSgpa(sem) {
+    const courses = modulesData.filter(c => (c.semester || 1) === sem);
+    const semStore = getGpaStore()[sem] || {};
+    let weighted = 0, credits = 0, graded = 0;
+    courses.forEach(c => {
+        const p = entryPoint(semStore[c.id]);
+        if (p == null || !c.credits) return;
+        weighted += p * c.credits;
+        credits += c.credits;
+        graded++;
+    });
+    return { sgpa: credits ? weighted / credits : null, credits, graded, total: courses.length };
+}
+
+function renderSgpa() {
+    const { sgpa, credits, graded, total } = computeSgpa(gpaSem);
+    const valEl = document.getElementById('gpa-sgpa-value');
+    const metaEl = document.getElementById('gpa-sgpa-meta');
+    if (sgpa == null) {
+        valEl.textContent = '—';
+        metaEl.innerHTML = `<span class="text-caption">Grade some courses to see your SGPA</span>`;
+    } else {
+        valEl.textContent = sgpa.toFixed(2);
+        valEl.style.color = sgpa >= 8 ? 'var(--success)' : sgpa >= 6 ? 'var(--warning)' : 'var(--danger)';
+        metaEl.innerHTML = `<span class="text-caption">${graded}/${total} courses · ${credits} credits counted</span>`;
+    }
+}
+
+function renderCgpa() {
+    const sems = [...new Set(modulesData.map(c => c.semester || 1))].sort((a, b) => a - b);
+    let totWeighted = 0, totCredits = 0;
+    const parts = [];
+    sems.forEach(s => {
+        const r = computeSgpa(s);
+        if (r.sgpa != null) {
+            totWeighted += r.sgpa * r.credits;
+            totCredits += r.credits;
+            parts.push(`<div class="gpa-cgpa-pill"><span>Sem ${s}</span><strong>${r.sgpa.toFixed(2)}</strong></div>`);
+        }
+    });
+    const cgpa = totCredits ? totWeighted / totCredits : null;
+    document.getElementById('gpa-cgpa-value').textContent = cgpa == null ? '—' : cgpa.toFixed(2);
+    document.getElementById('gpa-cgpa-sub').textContent = cgpa == null
+        ? 'Fill in a semester below to begin'
+        : `${parts.length} semester${parts.length > 1 ? 's' : ''} · ${totCredits} credits`;
+    document.getElementById('gpa-cgpa-breakdown').innerHTML = parts.join('');
+}
+
+function resetGpaSemester() {
+    const store = getGpaStore();
+    if (store[gpaSem]) { delete store[gpaSem]; setGpaStore(store); }
+    showToast(`Semester ${gpaSem} cleared`, 'info');
+    renderGpaRows();
+    renderCgpa();
+}
 
 // Refetch on tab focus
 document.addEventListener('visibilitychange', () => {
