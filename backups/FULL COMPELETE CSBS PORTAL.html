@@ -1,0 +1,2591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSBS Portal | Computer Science with Business Systems</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #dbeafe;
+            --secondary: #059669;
+            --accent: #f59e0b;
+            --dark: #1e293b;
+            --dark-gray: #475569;
+            --gray: #64748b;
+            --light-gray: #e2e8f0;
+            --light: #f8fafc;
+            --white: #ffffff;
+            --sidebar-width: 280px;
+            --header-height: 70px;
+            --border-radius: 12px;
+            --shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+       body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex; /* THIS FIXED THE LAYOUT */
+            overflow: hidden; /* Stop double scrollbars */
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--white);
+            height: 100vh;
+            /* REMOVED position: fixed */
+            flex-shrink: 0;
+            box-shadow: var(--shadow);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+            overflow-y: auto; 
+        }
+
+        .sidebar-header {
+            padding: 25px 20px;
+            border-bottom: 1px solid var(--light-gray);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            background: var(--primary);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--dark);
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        .nav-item {
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: var(--gray);
+            text-decoration: none;
+            transition: var(--transition);
+            border-left: 4px solid transparent;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .nav-item.active {
+            background: var(--primary-light);
+            color: var(--primary);
+            border-left-color: var(--primary);
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid var(--light-gray);
+            font-size: 0.85rem;
+            color: var(--gray);
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        /* Main Content Styles */
+        .main-content {
+            flex: 1; /* Makes content fill remaining space naturally */
+            /* REMOVED margin-left calculation */
+            padding: 30px;
+            height: 100vh;
+            overflow-y: auto; /* Put scrollbar here */
+        }
+
+        .content-header {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 25px 30px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .content-header h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .content-header h2 i {
+            color: var(--primary);
+            background: var(--primary-light);
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-avatar {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        /* Content Section Styles */
+        .content-section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-description {
+            color: var(--gray);
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            max-width: 800px;
+        }
+
+        /* Dashboard Styles */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .stat-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            border-left: 5px solid var(--primary);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+
+        .stat-label {
+            color: var(--gray);
+            font-size: 1rem;
+            font-weight: 500;
+        }
+
+        .modules-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .module-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            border: 1px solid var(--light-gray);
+        }
+
+        .module-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        .module-header {
+            padding: 25px;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .module-icon {
+            font-size: 2.2rem;
+            background: rgba(255,255,255,0.2);
+            width: 70px;
+            height: 70px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .module-info h3 {
+            font-size: 1.4rem;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .module-info p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .module-content {
+            padding: 25px;
+        }
+
+        .module-topics {
+            list-style-type: none;
+        }
+
+        .module-topics li {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--light-gray);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .module-topics li:last-child {
+            border-bottom: none;
+        }
+
+        .module-topics i {
+            color: var(--secondary);
+            font-size: 0.9rem;
+        }
+
+        /* New Resources Section Styles */
+        .module-resources {
+            border-top: 1px solid var(--light-gray);
+            padding-top: 15px;
+            margin-top: 15px;
+        }
+
+        .module-resources h4 {
+            font-size: 1.1rem;
+            color: var(--primary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .resource-list {
+            list-style-type: none;
+        }
+
+        .resource-list li {
+            margin-bottom: 8px;
+        }
+
+        .resource-list a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--dark-gray);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.2s;
+        }
+
+        .resource-list a:hover {
+            color: var(--primary);
+        }
+
+        .resource-list i {
+            color: var(--accent);
+        }
+
+        /* Assignments & Projects Styles */
+        .assignments-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .assignment-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            border-left: 5px solid var(--primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .assignment-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--primary);
+        }
+
+        .assignment-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.12);
+        }
+
+        .assignment-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            color: var(--dark);
+        }
+
+        .assignment-card p {
+            color: var(--gray);
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+
+        .assignment-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .due-date {
+            background: #fff3cd;
+            color: #856404;
+            padding: 8px 15px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status {
+            padding: 8px 15px;
+            border-radius: 50px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status.pending {
+            background: #ffeaa7;
+            color: #856404;
+        }
+
+        .status.submitted {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status.urgent {
+            background: #fed7d7;
+            color: #c53030;
+        }
+
+        .status.completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        /* Syllabus Styles */
+        .syllabus-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        .syllabus-card {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .syllabus-card::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: var(--primary);
+        }
+
+        .syllabus-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+
+        .syllabus-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            color: var(--primary);
+        }
+
+        .syllabus-card h3 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+
+        .syllabus-card p {
+            color: var(--gray);
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 12px 25px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+        }
+
+        /* Exam Schedule Styles */
+        .exam-schedule {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            margin-bottom: 40px;
+        }
+
+        .exam-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .exam-table th {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-weight: 600;
+        }
+
+        .exam-table td {
+            padding: 20px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .exam-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .exam-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .exam-badge {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-midterm {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-final {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-project {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-ia {
+            background: #e9d5ff;
+            color: #7e22ce;
+        }
+
+        /* Attendance Styles */
+        .search-container {
+            margin-bottom: 30px;
+            position: relative;
+            max-width: 500px;
+        }
+
+        .search-box {
+            width: 100%;
+            padding: 18px 20px 18px 50px;
+            border: 1px solid var(--light-gray);
+            border-radius: 50px;
+            font-size: 1rem;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+            transition: var(--transition);
+            background: var(--white);
+        }
+
+        .search-box:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 5px 25px rgba(37, 99, 235, 0.2);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray);
+        }
+
+        .attendance-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--white);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+
+        .attendance-table th {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            text-align: left;
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .attendance-table th:hover {
+            background: var(--primary-dark);
+        }
+
+        .attendance-table td {
+            padding: 18px 20px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .attendance-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .attendance-table tr:hover {
+            background: #f8fafc;
+        }
+
+        .present {
+            color: var(--secondary);
+            font-weight: 600;
+        }
+
+        .absent {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .low-attendance {
+            background-color: #fef2f2;
+        }
+
+        .attendance-warning {
+            background: #fef2f2;
+            border-left: 5px solid #ef4444;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .attendance-warning i {
+            color: #ef4444;
+            font-size: 1.5rem;
+        }
+
+        .sort-controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .sort-btn {
+            padding: 10px 20px;
+            background: var(--white);
+            border: 1px solid var(--light-gray);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sort-btn:hover {
+            background: var(--primary-light);
+            border-color: var(--primary);
+        }
+
+        .sort-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        /* Class Schedule Styles */
+        .schedule-container {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            margin-bottom: 40px;
+            padding: 20px;
+        }
+
+        .schedule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .schedule-header h3 {
+            font-size: 1.5rem;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .schedule-header h3 i {
+            color: var(--primary);
+        }
+
+        .schedule-info {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .schedule-info-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+
+        .schedule-info-item i {
+            color: var(--primary);
+        }
+
+        .schedule-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .schedule-table th {
+            background: var(--primary-light);
+            color: var(--primary-dark);
+            padding: 15px 10px;
+            text-align: center;
+            font-weight: 600;
+            border: 1px solid var(--light-gray);
+        }
+
+        .schedule-table td {
+            padding: 12px 8px;
+            border: 1px solid var(--light-gray);
+            text-align: center;
+            vertical-align: middle;
+            transition: var(--transition);
+        }
+
+        .schedule-table tr:hover td {
+            background: #f8fafc;
+        }
+
+        .time-header {
+            background: var(--primary-light) !important;
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+
+        .day-header {
+            background: var(--primary-light) !important;
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+
+        .subject-cell {
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .subject-cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .break-cell {
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: 500;
+        }
+
+        .lunch-cell {
+            background: #d1fae5;
+            color: #065f46;
+            font-weight: 500;
+        }
+
+        .empty-cell {
+            background: #f8fafc;
+        }
+
+        /* Syllabus Modal Styles */
+        .syllabus-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .syllabus-modal-content {
+            background: white;
+            margin: 40px auto;
+            width: 90%;
+            max-width: 1000px;
+            border-radius: var(--border-radius);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            animation: modalFadeIn 0.3s ease;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .syllabus-modal-header {
+            background: var(--primary);
+            color: white;
+            padding: 25px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .syllabus-modal-header h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.8rem;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .close-modal:hover {
+            transform: scale(1.1);
+        }
+
+        .syllabus-modal-body {
+            padding: 30px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        .syllabus-details {
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 25px;
+            box-shadow: var(--shadow);
+            margin-bottom: 25px;
+        }
+
+        .syllabus-details h3 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--dark);
+            border-bottom: 2px solid var(--primary-light);
+            padding-bottom: 10px;
+        }
+
+        .syllabus-unit {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--light-gray);
+        }
+
+        .syllabus-unit:last-child {
+            border-bottom: none;
+        }
+
+        .unit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            background: var(--primary-light);
+            padding: 15px 20px;
+            border-radius: 8px;
+        }
+
+        .unit-header h4 {
+            font-size: 1.2rem;
+            color: var(--primary-dark);
+            font-weight: 600;
+        }
+
+        .unit-hours {
+            background: var(--primary);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .unit-content {
+            padding: 0 20px;
+        }
+
+        .unit-topics {
+            list-style-type: none;
+            margin-bottom: 15px;
+        }
+
+        .unit-topics li {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--light-gray);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .unit-topics li:last-child {
+            border-bottom: none;
+        }
+
+        .unit-topics i {
+            color: var(--secondary);
+            margin-top: 5px;
+        }
+
+        .lab-practice {
+            background: #f0f9ff;
+            border-left: 4px solid var(--primary);
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 15px 0;
+        }
+
+        .lab-practice h5 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: var(--primary-dark);
+        }
+
+        .pedagogy {
+            background: #fef7ed;
+            border-left: 4px solid var(--accent);
+            padding: 15px 20px;
+            border-radius: 0 8px 8px 0;
+            margin: 15px 0;
+        }
+
+        .pedagogy h5 {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+            color: #92400e;
+        }
+
+        /* Mobile Styles */
+        @media (max-width: 1100px) {
+            .sidebar {
+                width: 80px;
+            }
+            
+            .sidebar-header h1, .nav-item span {
+                display: none;
+            }
+            
+            .sidebar-header {
+                justify-content: center;
+                padding: 20px 10px;
+            }
+            
+            .main-content {
+                margin-left: 80px;
+            }
+            
+            .nav-item {
+                padding: 15px;
+                justify-content: center;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .modules-grid, .assignments-container, .syllabus-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .exam-table, .attendance-table, .schedule-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .content-header {
+                flex-direction: column;
+                gap: 20px;
+                align-items: flex-start;
+            }
+            
+            .schedule-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+            
+            .schedule-info {
+                width: 100%;
+                justify-content: space-between;
+            }
+
+            .sort-controls {
+                flex-direction: column;
+            }
+
+            .syllabus-modal-content {
+                width: 95%;
+                margin: 20px auto;
+            }
+
+            .unit-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+        }
+
+        .bounce-in {
+            animation: bounceIn 0.6s ease;
+        }
+
+        @keyframes bounceIn {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.05); opacity: 0.9; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .no-assignment {
+            text-align: center;
+            padding: 40px;
+            color: var(--gray);
+            font-style: italic;
+        }
+    /* --- NEW RESPONSIVE GRID LAYOUT --- */
+    
+    /* 1. The Container: Uses CSS Grid to fit cards perfectly */
+    .modules-grid, .assignments-container {
+        display: grid;
+        /* This magic line makes it responsive: Fit as many as possible, min width 280px */
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); 
+        gap: 15px; /* Smaller gap between cards */
+        width: 100%;
+    }
+
+    /* 2. The Cards: Compact and Clean */
+    .module-card, .assignment-card {
+        width: 100% !important; /* Force full width of the grid cell */
+        margin: 0 !important;   /* Remove old margins */
+        display: flex;
+        flex-direction: column;
+        height: 100%;           /* Make all cards same height in a row */
+    }
+
+    /* Make text smaller and tighter */
+    .module-header {
+        padding: 15px !important; /* Less padding */
+    }
+    .module-header h3 {
+        font-size: 1.1rem !important; /* Smaller title */
+    }
+    .module-content {
+        padding: 10px 15px !important; /* Less padding inside */
+    }
+    .module-topics li {
+        font-size: 0.85rem !important; /* Smaller text for phone reading */
+        padding: 5px 0 !important;
+    }
+
+    /* 3. MOBILE SPECIFIC FIXES (Phone Mode) */
+    @media (max-width: 768px) {
+        /* Stack Sidebar and Content vertically */
+        #main-app-container {
+            flex-direction: column;
+            height: auto;
+            overflow-y: scroll;
+        }
+
+        /* Hide Sidebar by default on mobile (Optional: or make it a top bar) */
+        /* For now, let's make it a top scroll bar so it's accessible */
+        .sidebar {
+            width: 100%;
+            height: auto;
+            flex-direction: row;
+            overflow-x: auto; /* Scroll sideways */
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+            border-right: none;
+        }
+        
+        .sidebar-header { display: none; } /* Hide logo on phone to save space */
+        .nav-item { 
+            padding: 8px 15px; 
+            font-size: 0.8rem; 
+            white-space: nowrap; 
+            border-radius: 20px;
+            margin-right: 10px;
+            background: #f1f5f9;
+        }
+        .nav-item.active { background: #2563eb; color: white; }
+        .nav-item span { display: inline; } /* Ensure text shows */
+
+        /* Fix Main Content spacing */
+        .main-content {
+            padding: 15px !important; /* Less edge space on phones */
+        }
+        
+        /* Make cards take full width on small phones */
+        .modules-grid {
+            grid-template-columns: 1fr; /* 1 column */
+        }
+    }
+    </style>
+    <style>
+    /* Force the table to look clean and centered */
+    #dynamic-schedule {
+        width: 100%;
+        border-collapse: separate; /* Allows rounded corners */
+        border-spacing: 4px; /* Space between cells */
+        margin-top: 20px;
+    }
+
+    #dynamic-schedule th, 
+    #dynamic-schedule td {
+        text-align: center;
+        vertical-align: middle;
+        padding: 15px 10px; /* More breathing room */
+        border-radius: 8px; /* Rounded corners for all cells */
+        font-family: 'Inter', sans-serif;
+        font-size: 0.9rem;
+    }
+
+    /* Make the Day column bold and distinct */
+    .day-header {
+        font-weight: 700;
+        background-color: #f1f5f9;
+        color: #475569;
+    }
+
+    /* Fix the Break/Lunch Columns to look like strips */
+    .break-cell, .lunch-cell {
+        writing-mode: vertical-rl; /* Vertical Text */
+        text-orientation: mixed;
+        transform: rotate(180deg); /* Flip it right side up */
+        font-weight: bold;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        border: none;
+    }
+    
+    /* Hover effect for subjects */
+    .subject-cell:hover {
+        transform: scale(1.05);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+/* --- PASTE THIS STARTING AT LINE 1128 --- */
+    
+    body {
+        /* This arranges the Sidebar and Content side-by-side */
+        display: flex; 
+        margin: 0;
+        padding: 0;
+        width: 100vw;  /* Use full screen width */
+        height: 100vh; /* Use full screen height */
+        overflow-x: hidden; /* Stop side-scrolling */
+    }
+
+    /* Force the Right Side (Content) to fill the screen */
+    /* Note: Replace '.main-content' with the actual class name of your right-side div */
+    .main-content, .dashboard-container, main { 
+        flex: 1; /* Grows to fill empty space */
+        width: 100%; 
+        box-sizing: border-box; /* Ensures padding doesn't break layout */
+    }
+
+    /* Optional: Ensure Sidebar doesn't shrink */
+    /* Note: Replace '.sidebar' with your actual sidebar class name */
+    .sidebar, aside {
+        flex-shrink: 0;
+        width: 250px; /* Or whatever width you prefer */
+    }
+/* --- FIX LAYOUT FOR ID #main-app-container --- */
+    #main-app-container {
+        display: flex !important; /* Forces side-by-side layout */
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden; /* Prevents double scrollbars */
+    }
+
+    /* Fix the Sidebar */
+    .sidebar {
+        width: 250px;         /* Fixed width */
+        flex-shrink: 0;       /* prevent shrinking */
+        height: 100%;
+        overflow-y: auto;     /* Allow scrolling inside sidebar */
+        background-color: white; /* Ensure it has a background */
+    }
+
+    /* Fix the Right Side Content */
+    /* IMPORTANT: Ensure your content div has class="main-content" */
+    .main-content {
+        flex-grow: 1;         /* Takes up all remaining space */
+        height: 100%;
+        overflow-y: auto;     /* Allow scrolling inside the content */
+        padding: 20px;        /* Add spacing so text isn't on the edge */
+    }</style><meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+<script>
+    // Redirect to login.html if not logged in
+    document.addEventListener('DOMContentLoaded', function() {
+        const userEmail = sessionStorage.getItem('userEmail');
+        if (!userEmail) {
+            window.location.href = 'login.html';
+        }
+    });
+</script>
+
+<div id="welcome-modal">
+    <div style="font-size: 3rem;">👋</div>
+    <h2 id="welcome-title" style="color: #1e293b; margin: 10px 0;">Good Morning!</h2>
+    <p id="welcome-user" style="color: #64748b; font-size: 1.2rem;"></p>
+</div>
+<div id="main-app-container">
+    <!-- Sidebar Navigation -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-laptop-code"></i>
+            </div>
+            <h1>CSBS Portal</h1>
+        </div>
+        
+        <div class="sidebar-nav">
+            <a href="#" class="nav-item active" data-target="dashboard">
+                <i class="fas fa-home"></i>
+                <span>Dashboard</span>
+            </a>
+            <a href="#" class="nav-item" data-target="modules">
+                <i class="fas fa-cubes"></i>
+                <span>Course Modules</span>
+            </a>
+            <a href="#" class="nav-item" data-target="syllabus">
+                <i class="fas fa-book"></i>
+                <span>Syllabus</span>
+            </a>
+            <a href="#" class="nav-item" data-target="assignments">
+                <i class="fas fa-tasks"></i>
+                <span>Assignments</span>
+            </a>
+            <a href="#" class="nav-item" data-target="projects">
+                <i class="fas fa-project-diagram"></i>
+                <span>Projects</span>
+            </a>
+            <a href="#" class="nav-item" data-target="exams">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Exam Schedule</span>
+            </a>
+            <a href="#" class="nav-item" data-target="attendance">
+                <i class="fas fa-clipboard-check"></i>
+                <span>Attendance</span>
+            </a>
+        </div>
+        
+        <div class="sidebar-footer">
+            <p>CSBS Program &copy; 2023</p>
+        </div>
+    </div>
+    
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <!-- Content Header -->
+        <div class="content-header">
+            <h2><i class="fas fa-home"></i> Dashboard</h2>
+            <div class="user-info">
+                <div class="user-avatar">CS</div>
+                <div>
+                    <div style="font-weight: 600;">Computer Science</div>
+                    <div style="font-size: 0.9rem; color: var(--gray);">with Business Systems</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="content-section active">
+            <p class="section-description">Welcome to your CSBS Portal. Here you can access all your course materials, assignments, and academic information in one place.</p>
+            
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-value">11</div>
+                    <div class="stat-label">Active Courses</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">7</div>
+                    <div class="stat-label">Pending Assignments</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">78.2%</div>
+                    <div class="stat-label">Average Attendance</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">14</div>
+                    <div class="stat-label">Days Until Finals</div>
+                </div>
+            </div>
+
+            <!-- Class Schedule Section -->
+            <div class="schedule-container">
+                <div class="schedule-header">
+                    <h3><i class="fas fa-calendar-alt"></i> Class Schedule</h3>
+                    <div class="schedule-info">
+                        <div class="schedule-info-item">
+                            <i class="fas fa-user"></i>
+                            <span>Class Teacher: Prof. Udhay Kumar Singh</span>
+                        </div>
+                        <div class="schedule-info-item">
+                            <i class="fas fa-clock"></i>
+                            <span>Session: August 2025 - January 2026</span>
+                        </div>
+                    </div>
+                </div>
+                
+               <table class="schedule-table" id="dynamic-schedule">
+   <thead>
+    <tr>
+        <th class="time-header">Day</th>
+        <th>8:45-9:45</th>
+        <th>9:45-10:45</th>
+        <th style="background:#fef3c7; color:#92400e;">BREAK</th> <th>11:00-12:00</th>
+        <th>12:00-12:50</th>
+        <th style="background:#d1fae5; color:#065f46;">LUNCH</th> <th>1:50-2:50</th>
+        <th>2:50-3:50</th>
+    </tr>
+</thead>
+    <tbody>
+        </tbody>
+</table>
+            </div>
+        </div>
+        
+        <!-- Modules Section -->
+       <div id="modules" class="content-section">
+            <p class="section-description">Explore all the learning modules for your CSBS program.</p>
+            
+            <div class="modules-grid" id="modules-container">
+                <p style="padding: 20px; color: gray;">Loading modules from server...</p>
+            </div>
+        </div>
+        
+        <!-- Syllabus Section -->
+        <div id="syllabus" class="content-section">
+            <p class="section-description">Click on any subject to view the complete syllabus with detailed topics, lab practices, and pedagogy.</p>
+            
+            <div class="syllabus-content">
+                <div class="syllabus-card bounce-in" data-subject="BCSV-I">
+                    <div class="syllabus-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>BCSV-I</h3>
+                    <p>Business Communication & Value Science - I</p>
+                    <button class="btn"><i class="fas fa-eye"></i> View Syllabus</button>
+                </div>
+                
+                <div class="syllabus-card bounce-in" data-subject="DMCS">
+                    <div class="syllabus-icon">
+                        <i class="fas fa-calculator"></i>
+                    </div>
+                    <h3>DMCS</h3>
+                    <p>Discrete Mathematics for Computer Science</p>
+                    <button class="btn"><i class="fas fa-eye"></i> View Syllabus</button>
+                </div>
+                
+                <div class="syllabus-card bounce-in" data-subject="ITPSC">
+                    <div class="syllabus-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3>ITPSC</h3>
+                    <p>Statistics, Probability & Calculus</p>
+                    <button class="btn"><i class="fas fa-eye"></i> View Syllabus</button>
+                </div>
+                
+                <div class="syllabus-card bounce-in" data-subject="PHYSICS">
+                    <div class="syllabus-icon">
+                        <i class="fas fa-atom"></i>
+                    </div>
+                    <h3>PHYSICS</h3>
+                    <p>Fundamentals of Physics</p>
+                    <button class="btn"><i class="fas fa-eye"></i> View Syllabus</button>
+                </div>
+                
+                <div class="syllabus-card bounce-in" data-subject="PEE">
+                    <div class="syllabus-icon">
+                        <i class="fas fa-bolt"></i>
+                    </div>
+                    <h3>PEE</h3>
+                    <p>Principles of Electrical Engineering</p>
+                    <button class="btn"><i class="fas fa-eye"></i> View Syllabus</button>
+                </div>
+                
+                <div class="syllabus-card bounce-in" data-subject="IPS">
+                    <div class="syllabus-icon">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <h3>IPS</h3>
+                    <p>Introduction to Problem Solving</p>
+                    <button class="btn"><i class="fas fa-eye"></i> View Syllabus</button>
+                </div>
+                
+                <div class="syllabus-card bounce-in" data-subject="IPS LAB">
+                    <div class="syllabus-icon">
+                        <i class="fas fa-flask"></i>
+                    </div>
+                    <h3>IPS LAB</h3>
+                    <p>Problem Solving Lab</p>
+                    <button class="btn"><i class="fas fa-eye"></i> View Syllabus</button>
+                </div>
+                
+                <div class="syllabus-card bounce-in" data-subject="PHYSICS LAB">
+                    <div class="syllabus-icon">
+                        <i class="fas fa-vial"></i>
+                    </div>
+                    <h3>PHYSICS LAB</h3>
+                    <p>Physics Laboratory</p>
+                    <button class="btn"><i class="fas fa-eye"></i> View Syllabus</button>
+                </div>
+                
+                <div class="syllabus-card bounce-in" data-subject="PEE LAB">
+                    <div class="syllabus-icon">
+                        <i class="fas fa-microchip"></i>
+                    </div>
+                    <h3>PEE LAB</h3>
+                    <p>Electrical Engineering Lab</p>
+                    <button class="btn"><i class="fas fa-eye"></i> View Syllabus</button>
+                </div>
+                
+                <div class="syllabus-card bounce-in" data-subject="DSA">
+                    <div class="syllabus-icon">
+                        <i class="fas fa-code"></i>
+                    </div>
+                    <h3>DSA</h3>
+                    <p>Data Structures using C</p>
+                    <button class="btn"><i class="fas fa-eye"></i> View Syllabus</button>
+                </div>
+                
+                <div class="syllabus-card bounce-in" data-subject="UHV">
+                    <div class="syllabus-icon">
+                        <i class="fas fa-hands-helping"></i>
+                    </div>
+                    <h3>UHV</h3>
+                    <p>Universal Human Values</p>
+                    <button class="btn"><i class="fas fa-eye"></i> View Syllabus</button>
+                </div>
+                
+                <div class="syllabus-card bounce-in" data-subject="IC">
+                    <div class="syllabus-icon">
+                        <i class="fas fa-landmark"></i>
+                    </div>
+                    <h3>IC</h3>
+                    <p>Indian Constitution</p>
+                    <button class="btn"><i class="fas fa-eye"></i> View Syllabus</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Assignments Section -->
+        <div id="assignments" class="content-section">
+            <p class="section-description">Track all your assignments with due dates.</p>
+            <div id="assignments-container" class="assignments-container"></div>
+        </div>
+        
+        <!-- Projects Section -->
+        <div id="projects" class="content-section">
+            <p class="section-description">Submit your course projects and track their progress here.</p>
+            <div id="projects-container" class="assignments-container"></div>
+        </div>
+
+        <!-- Exam Schedule Section -->
+        <div id="exams" class="content-section">
+            <p class="section-description">View your upcoming exams and important academic dates.</p>
+            
+            <div class="exam-schedule">
+                <table class="exam-table">
+                    <thead>
+                        <tr>
+                            <th>Course</th>
+                            <th>Exam Type</th>
+                            <th>Date</th>
+                            <th>Time</th>
+                            <th>Location</th>
+                        </tr>
+                    </thead>
+                    <tbody id="exams-container">
+    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Attendance Section -->
+        <div id="attendance" class="content-section">
+            <p class="section-description">Search for your name to view your attendance record. Total classes: 115</p>
+            
+            <div class="attendance-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <div>
+                    <strong>Attendance Alert:</strong> Students with attendance below 75% may face restrictions in appearing for exams. Please check your attendance regularly.
+                </div>
+            </div>
+            
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" class="search-box" id="attendanceSearch" placeholder="Search by name or USN...">
+            </div>
+            
+            <div class="sort-controls">
+                <button class="sort-btn" id="sortByName">
+                    <i class="fas fa-sort-alpha-down"></i> Sort by Name
+                </button>
+                <button class="sort-btn" id="sortByAttendance">
+                    <i class="fas fa-sort-numeric-down"></i> Sort by Attendance
+                </button>
+                <button class="sort-btn" id="sortDefault">
+                    <i class="fas fa-sort"></i> Default Order
+                </button>
+            </div>
+            
+            <table class="attendance-table" id="attendanceTable">
+                <thead>
+                    <tr>
+                        <th>S.No.</th>
+                        <th>USN</th>
+                        <th>Name</th>
+                        <th>Classes Attended</th>
+                        <th>Attendance %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Attendance data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Syllabus Modal -->
+    <div class="syllabus-modal" id="syllabusModal">
+        <div class="syllabus-modal-content">
+            <div class="syllabus-modal-header">
+                <h2 id="modalSubject">Subject Syllabus</h2>
+                <button class="close-modal" id="closeModal">&times;</button>
+            </div>
+            <div class="syllabus-modal-body" id="modalBody">
+                <!-- Syllabus content will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Attendance data from the Excel sheet
+  
+        // Navigation functionality
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Remove active class from all nav items and sections
+                document.querySelectorAll('.nav-item').forEach(nav => {
+                    nav.classList.remove('active');
+                });
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                // Add active class to clicked nav item
+                this.classList.add('active');
+                
+                // Show corresponding section
+                const targetId = this.getAttribute('data-target');
+                document.getElementById(targetId).classList.add('active');
+                
+                // Update content header
+                const headerText = this.querySelector('span').textContent;
+                document.querySelector('.content-header h2').innerHTML = 
+                    `<i class="${this.querySelector('i').className}"></i> ${headerText}`;
+            });
+        });
+
+        // Populate attendance table
+        function populateAttendanceTable(data = attendanceData) {
+            const tbody = document.querySelector('#attendanceTable tbody');
+            tbody.innerHTML = '';
+            
+            data.forEach((student, index) => {
+                const row = document.createElement('tr');
+                
+                // Highlight students with low attendance (< 75%)
+                if (student.percentage < 75) {
+                    row.classList.add('low-attendance');
+                }
+                
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${student.usn}</td>
+                    <td>${student.name}</td>
+                    <td>${student.attended}</td>
+                    <td class="${student.percentage >= 75 ? 'present' : 'absent'}">${student.percentage.toFixed(2)}%</td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        // Attendance search functionality
+        document.getElementById('attendanceSearch').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = document.querySelectorAll('#attendanceTable tbody tr');
+            
+            rows.forEach(row => {
+                const name = row.cells[2].textContent.toLowerCase();
+                const usn = row.cells[1].textContent.toLowerCase();
+                
+                if (name.includes(searchTerm) || usn.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+
+        // Sorting functionality
+        document.getElementById('sortByName').addEventListener('click', function() {
+            const sortedData = [...attendanceData].sort((a, b) => a.name.localeCompare(b.name));
+            populateAttendanceTable(sortedData);
+            
+            // Update active button state
+            document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+        });
+
+        document.getElementById('sortByAttendance').addEventListener('click', function() {
+            const sortedData = [...attendanceData].sort((a, b) => b.percentage - a.percentage);
+            populateAttendanceTable(sortedData);
+            
+            // Update active button state
+            document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+        });
+
+        document.getElementById('sortDefault').addEventListener('click', function() {
+            populateAttendanceTable();
+            
+            // Update active button state
+            document.querySelectorAll('.sort-btn').forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+        });
+
+        // Module card click functionality
+        document.querySelectorAll('.module-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const moduleName = this.querySelector('h3').textContent;
+                alert(`Opening ${moduleName} module...\n\nIn a real implementation, this would navigate to the module content.`);
+            });
+        });
+
+        // Subject cell hover functionality
+        document.querySelectorAll('.subject-cell').forEach(cell => {
+            cell.addEventListener('mouseenter', function() {
+                this.style.transform = 'scale(1.05)';
+                this.style.boxShadow = '0 3px 10px rgba(0,0,0,0.1)';
+            });
+            
+            cell.addEventListener('mouseleave', function() {
+                this.style.transform = 'scale(1)';
+                this.style.boxShadow = 'none';
+            });
+        });
+
+        // Syllabus Modal Functionality
+        const syllabusModal = document.getElementById('syllabusModal');
+        const closeModal = document.getElementById('closeModal');
+        const modalSubject = document.getElementById('modalSubject');
+        const modalBody = document.getElementById('modalBody');
+
+        // Syllabus data
+        const syllabusData = {
+            'BCSV-I': {
+                title: 'Business Communication & Value Science - I',
+                code: 'HSMC104',
+                hours: '30',
+                units: [
+                    {
+                        title: 'HUMAN VALUES',
+                        hours: '6+3 Hours',
+                        topics: [
+                            'Values – Self exploration',
+                            'Values of individuals: Presentation on favourite personality and the skills and values they demonstrate',
+                            'Interviewing a maid, watchman, sweeper, cab driver, beggar and narrate what you think are the values that drive them',
+                            'Writing: newspaper report on an IPL match',
+                            'Record conversation between a celebrity and an interviewer'
+                        ],
+                        labPractice: [
+                            'Exercise 1: Record a conversation between a celebrity and an interviewer',
+                            'Exercise 2: Write a newspaper report on the current topic',
+                            'Exercise 3: Quiz'
+                        ],
+                        pedagogy: 'Lecture using slides and board to explain understanding of self. Immersion activity on life skills and values. Lectures with video on overview of business communication. Formative evaluation of situational dialogue. Anubhav activities like meditation.'
+                    },
+                    {
+                        title: 'GRAMMAR AND LANGUAGE DEVELOPMENT',
+                        hours: '6+3 Hours',
+                        topics: [
+                            'Parts of Speech - Applications of tenses - Sentence formation, sentence structure, show sequence - Voices – Questioning',
+                            'Vocabulary: Word formation: - Synonyms, antonyms, abbreviations - compound words –single word substitution',
+                            'ESSENTIALS OF TECHNICAL COMMUNICATION',
+                            'Email -: Formal and informal emails - words from General Service List (GSL) by West, Academic word list (AWL) - technical specific terms related to the field of technology - phrases, idioms, significant abbreviations - formal business vocabulary'
+                        ],
+                        labPractice: [
+                            'Exercise 1: Evaluation on listen to record and answer questions based on them',
+                            'Exercise 2: Skit/roleplay based on communication skills',
+                            'Exercise 3: Activity based learning on email writing',
+                            'Exercise 4: Flipped classroom on vocabulary enrichment'
+                        ],
+                        pedagogy: 'Lecture using slides and board on essential grammar and sentence formation. Immersion activity on types of communication. Activity based learning on listening skills. Formative evaluation on the importance of questioning. Anubhav activities like skit based on communication skills.'
+                    },
+                    {
+                        title: 'Basic Dialogical Skills',
+                        hours: '6+3 Hours',
+                        topics: [
+                            'Critical Reasoning - Dialogue',
+                            'Focus: Basic exercises with teacher and software scaffolding',
+                            'Building dialogical skills',
+                            'Theoretical framework for Introductory speeches - Build confidence and basic structure',
+                            'Theoretical framework for Persuasive speeches - Apply advanced rhetorical techniques',
+                            'Differences in the three styles of Speeches'
+                        ],
+                        labPractice: [
+                            'Exercise 1: Script writing of Introductory Speech',
+                            'Exercise 2: Script writing of Persuasive Speech',
+                            'Exercise 3: Audio and video learning based on verbal communication',
+                            'Exercise 4: Dialogue Skills Exercise :Engineering Scenario – Machine Breakdown Discussion'
+                        ],
+                        pedagogy: 'Formative Assessment (Ongoing) Speech outlines, Peer review: Other Students provide feedback on drafts Peer review: Other Students provide feedback on drafts'
+                    },
+                    {
+                        title: 'Reading articles – Summary writing, story writing',
+                        hours: '6+3 Hours',
+                        topics: [
+                            'Independent Practice - Persuasive speech',
+                            'Focus: Exercises without teacher scaffolding - student independence'
+                        ],
+                        labPractice: [
+                            'Exercise 1: Professional Email Composition (2 hours): Students practice various business emails (inquiries, requests, responses) using templates (with tone analysis and professional formatting guidance)',
+                            'Exercise 2: Role Play a Journalist/Editorial/News assignment - Draft an editorial taking a clear stance on a local or national issue',
+                            'Exercise 3: Persuasive speech'
+                        ],
+                        pedagogy: 'Activity based learning on written communication. Formative evaluation on building your CV. Formative evaluation on community service- work with an NGO. Scaffold Learning, Practical Application'
+                    },
+                    {
+                        title: 'APPLICATION OF LIFE SKILLS',
+                        hours: '6+3 Hours',
+                        topics: [
+                            'Life Skills: Movie based learning – identifying skills and values - critical life skills - appreciation of diversity - Community service – work with an NGO and make a presentation'
+                        ],
+                        labPractice: [
+                            'Exercise 1: Watching a movie',
+                            'Exercise 2: Appreciation of diversity',
+                            'Exercise 3: Video on NGOs',
+                            'Exercise 4: Join a trek/activity on values and life skills'
+                        ],
+                        pedagogy: 'Video and activity on diversity. Formative evaluation on values and life skills. Interactive learning. Anubhav learning on meditation, etc.'
+                    }
+                ]
+            },
+            'DMCS': {
+                title: 'Discrete Mathematics for Computer Science',
+                code: '24CSBSMA11',
+                hours: '45',
+                units: [
+                    {
+                        title: 'Mathematical Logic',
+                        hours: '09 hours',
+                        topics: [
+                            'Propositional calculus - propositions and connectives, syntax',
+                            'Semantics - truth assignments and truth tables, validity and satisfiability, tautology',
+                            'Adequate set of connectives',
+                            'Equivalence and normal forms',
+                            'Compactness and resolution',
+                            'Formal reducibility - natural deduction system and axiom system',
+                            'Soundness and completeness'
+                        ],
+                        pedagogy: 'Lecture with visual aids: Truth tables, logic gates visualization. Interactive examples: Use live problem-solving sessions to explain propositional logic and truth tables. Practice worksheets: Natural deduction, tautology, satisfiability exercises. Tools: Logic simulation tools (e.g., Logicly).'
+                    },
+                    {
+                        title: 'Boolean Algebra',
+                        hours: '09 hours',
+                        topics: [
+                            'Introduction of Boolean algebra, truth table, basic logic gate',
+                            'Basic postulates of Boolean algebra, principle of duality',
+                            'Canonical form',
+                            'Karnaugh map for solution of logic gates'
+                        ],
+                        pedagogy: 'Conceptual teaching: Focus on basic postulates and duality. Hands-on: Solving logic gate circuits using Boolean expressions. Karnaugh Map practice: Solve using step-by-step visual simplification.'
+                    },
+                    {
+                        title: 'Combinatorics',
+                        hours: '09 hours',
+                        topics: [
+                            'Basic counting, principle of inclusion and exclusion',
+                            'Pigeonhole principle',
+                            'Generating functions',
+                            'Recurrence relations (First order homogeneous and non-homogeneous and second order homogeneous)'
+                        ],
+                        pedagogy: 'Problem-solving: Emphasis on counting techniques and inclusion-exclusion. Visualization: Flow diagrams for pigeonhole principle and recurrence relations. Worked examples: Practice problems for generating functions.'
+                    },
+                    {
+                        title: 'Graph Theory',
+                        hours: '09 hours',
+                        topics: [
+                            'Graphs and digraphs, complement, isomorphism, connectedness and reachability',
+                            'Adjacency matrix',
+                            'Eulerian paths and circuits in graphs and digraphs',
+                            'Hamiltonian paths and circuits in graphs and tournaments, trees',
+                            'Planar graphs, Euler\'s formula, dual of a planer graph',
+                            'Independence number and clique number, chromatic number',
+                            'Statement of Four- color theorem'
+                        ],
+                        pedagogy: 'Graph drawing: In-class drawing of graphs and digraphs. Real-life examples: Use maps, social networks to explain graphs. Concept building: Start from basic graphs to Euler/Hamilton paths.'
+                    },
+                    {
+                        title: 'Abstract Algebra',
+                        hours: '09 hours',
+                        topics: [
+                            'Set, relation – Algebraic System: Groups, sub groups, homomorphism, cosets',
+                            'Lagrange\'s theorem – Ring and Field(definition)'
+                        ],
+                        pedagogy: 'Concrete examples: Start from familiar number sets to abstract structures. Proof teaching: Use simple proof techniques for group properties. Step-by-step exploration: Lagrange\'s theorem, subgroups, cosets.'
+                    }
+                ]
+            },
+            'ITPSC': {
+                title: 'Introductory Topics in Statistics, Probability and Calculus',
+                code: 'BSC103',
+                hours: '45',
+                units: [
+                    {
+                        title: 'Introduction to Statistics',
+                        hours: '09 hours',
+                        topics: [
+                            'Graphical representation, Frequency curves',
+                            'Descriptive measures - Central tendency and Dispersion',
+                            'Bivariate data: Summarization, marginal and conditional frequency distribution'
+                        ],
+                        pedagogy: 'Concept introduction Case Studies (e.g., Daily website visitors), Problem-Based Tasks, Guided practice with real-world datasets, Hands on experiments and simulation, Presentation'
+                    },
+                    {
+                        title: 'Probability',
+                        hours: '09 hours',
+                        topics: [
+                            'Concept of experiments, sample space, events',
+                            'Definition of Combinatorial Probability, Addition Theorem',
+                            'Conditional Probability, Multiplication Theorem, Bayes\' Theorem',
+                            'Expected values and Moments',
+                            'Random Variables: Discrete and Continuous'
+                        ],
+                        pedagogy: 'Problem-Based Tasks, Case Studies (e.g., product defects), Hands on experiments and simulation'
+                    },
+                    {
+                        title: 'Probability Distribution',
+                        hours: '09 hours',
+                        topics: [
+                            'Discrete and Continuous distributions: Binomial, Poisson and Geometric distributions',
+                            'Uniform, Exponential, Normal distributions'
+                        ],
+                        pedagogy: 'Problem-Based Tasks, Hands on experiments and simulation, Case Studies (e.g., Quality Control in Manufacturing)'
+                    },
+                    {
+                        title: 'Differential Calculus',
+                        hours: '09 hours',
+                        topics: [
+                            'Derivatives of parametric, implicit functions, infinite series and logarithmic functions',
+                            'Maxima and minima for single variable'
+                        ],
+                        pedagogy: 'Problem-Based Tasks, Interactive AI demos, Practical sessions on visualization tools'
+                    },
+                    {
+                        title: 'Integral Calculus',
+                        hours: '09 hours',
+                        topics: [
+                            'Definite and Indefinite integrals – Integration by parts',
+                            'Double and Triple integrals in Cartesian form',
+                            'Area and Volume'
+                        ],
+                        pedagogy: 'Problem-Based Tasks, Interactive AI demos, Practical sessions on visualization tools'
+                    }
+                ]
+            },
+            'PHYSICS': {
+                title: 'Fundamentals of Physics',
+                code: 'BSC101',
+                hours: '60',
+                units: [
+                    {
+                        title: 'OSCILLATION',
+                        hours: '12 Hours',
+                        topics: [
+                            'Periodic motion-simple harmonic motion-characteristics of simple harmonic motion',
+                            'Vibration of simple springs mass system –resonance: definition',
+                            'Damped harmonic oscillator – heavy, critical and light damping',
+                            'Energy decay in a damped harmonic oscillator, quality factor',
+                            'Forced mechanical and electrical oscillators'
+                        ],
+                        labPractice: [
+                            'Lab exercise 1: Spring mass system- Determination of force constant of the given helical spring'
+                        ],
+                        pedagogy: 'Understand the principle of Hooke\'s Law and its application in simple harmonic motion (SHM). Experimentally determine the spring constant (k) using a helical spring and mass. Analyze the linear relationship between force and extension. Apply experimental methods, data recording, graph plotting, and uncertainty analysis. Interpret real-world applications of spring-mass systems in engineering.'
+                    },
+                    {
+                        title: 'FUNDAMENTALS OF WAVE OPTICS',
+                        hours: '12 Hours',
+                        topics: [
+                            'Theory of interference fringes-types of interference-Fresnel\'s prism-Newton\'s rings',
+                            'Diffraction-Two kinds of diffraction-Difference between interference and diffraction',
+                            'Fresnel\'s half period zone and zone plate-Fraunhofer diffraction at single slit-plane diffraction grating',
+                            'Temporal and Spatial Coherence',
+                            'Polarization - Concept of production of polarized beam of light from two SHM acting at right angle; plane, elliptical and circularly polarized light, Brewster\'s law, double refraction'
+                        ],
+                        labPractice: [
+                            'Lab exercise 1: Determination of wave length of light by Newton\'s Ring method'
+                        ],
+                        pedagogy: 'Understand the principle of interference in thin films. Observe and interpret Newton\'s rings—a classical interference pattern. Experimentally determine the wavelength (λ) of monochromatic light. Analyze circular fringes to derive a relation between diameter and order. Apply graphical methods to extract physical quantities from observed data.'
+                    },
+                    {
+                        title: 'QUANTUM MECHANICS AND CRYSTALLOGRAPHY',
+                        hours: '12 Hours',
+                        topics: [
+                            'Introduction - Planck\'s quantum theory- Matter waves, de-Broglie wavelength',
+                            'Heisenberg\'s Uncertainty principle',
+                            'Time independent and time dependent Schrödinger\'s wave equation',
+                            'Physical significance of wave function',
+                            'Particle in a one- dimensional potential box, Heisenberg Picture',
+                            'Crystallography - Basic terms-types of crystal systems, Bravais lattices, miller indices, d spacing, Debye Scherrer powder method, Laue method- Atomic packing factor for SC, BCC, FCC and HCP structures',
+                            'Semiconductor Physics - conductor, semiconductor and Insulator; Basic concept of Band theory'
+                        ],
+                        labPractice: [
+                            'Lab exercise 1: Determination of Plank constant',
+                            'Lab exercise 2: Determination of Stefan\'s Constant'
+                        ],
+                        pedagogy: 'Understand the photoelectric effect and its quantum explanation. Relate photon energy to frequency and LED threshold voltage. Experimentally determine Planck\'s constant using LED characteristics. Analyze the linear relationship between energy and frequency. Understand blackbody radiation and the Stefan-Boltzmann law. Determine Stefan\'s constant experimentally. Analyze the relationship between temperature and radiated power. Understand the assumptions and limitations of ideal blackbody models.'
+                    },
+                    {
+                        title: 'LASER AND FIBER OPTICS',
+                        hours: '12 Hours',
+                        topics: [
+                            'Einstein\'s theory of matter radiation interaction and A and B coefficients',
+                            'Amplification of light by population inversion',
+                            'Different types of lasers: Ruby Laser, CO2 and Neodymium lasers',
+                            'Properties of laser beams: mono- chromaticity, coherence, directionality and brightness, laser speckles',
+                            'Applications of lasers in engineering',
+                            'Fiber optics and Applications, Types of optical fibres'
+                        ],
+                        labPractice: [
+                            'Lab exercise 1: Determination of wave length of light by Laser diffraction method',
+                            'Lab exercise 2: Determination of laser and optical fiber parameters'
+                        ],
+                        pedagogy: 'Understand the principle of diffraction and the role of slit width and wavelength. Observe and record the diffraction pattern produced by a laser through a single slit or grating. Use the diffraction formula to calculate the wavelength (λ) of monochromatic light. Improve precision using graphical data analysis and error estimation. Identify and describe key laser parameters such as divergence, beam diameter, and spot size. Understand basic principles of fiber optics: core, cladding, and total internal reflection. Experimentally determine numerical aperture (NA) of an optical fiber. Relate these physical measurements to real-world applications in communication and sensing.'
+                    },
+                    {
+                        title: 'THERMODYNAMICS AND ELECTROMAGNETISM',
+                        hours: '12 Hours',
+                        topics: [
+                            'Zeroth law of thermodynamics',
+                            'First law of thermodynamics, brief discussion on application of 1st law',
+                            'Second law of thermodynamics and concept of Engine, entropy',
+                            'Change in entropy in reversible and irreversible processes',
+                            'Third law of thermodynamics',
+                            'Electromagnetism: Continuity equation for current densities – Maxwell\'s equations in vacuum and non-conducting medium'
+                        ],
+                        pedagogy: 'Interactive lectures, practical demonstrations, problem-solving sessions'
+                    }
+                ]
+            },
+            'PEE': {
+                title: 'Principles of Electrical Engineering',
+                code: 'ESC101',
+                hours: '45',
+                units: [
+                    {
+                        title: 'INTRODUCTION',
+                        hours: '09 Hours',
+                        topics: [
+                            'Concept of Potential difference, voltage, current',
+                            'Fundamental linear passive and active elements to their functional current-voltage relation',
+                            'Terminology and symbols in order to describe electric networks',
+                            'Voltage source and current sources, ideal and practical sources',
+                            'Concept of dependent and independent sources',
+                            'Kirchhoff-s laws and applications to network solutions using mesh and nodal analysis',
+                            'Concept of work, power, energy, and conversion of energy'
+                        ],
+                        pedagogy: 'Interactive Lecture, collaborative learning, Hands on Experiments, collaborative problem solving'
+                    },
+                    {
+                        title: 'DC CIRCUITS',
+                        hours: '09 hours',
+                        topics: [
+                            'Current-voltage relations of the electric network by mathematical equations to analyze the network (Thevenin\'s theorem, Norton\'s Theorem, Maximum Power Transfer theorem)',
+                            'Simplifications of networks using series-parallel, Star/Delta transformation',
+                            'Superposition theorem'
+                        ],
+                        pedagogy: 'Interactive Lecture, Practical Demonstrations, structured discussions, reflective questioning'
+                    },
+                    {
+                        title: 'PRINCIPLE OF ELECTROSTATICS AND ELECTROMECHANICS',
+                        hours: '09 hours',
+                        topics: [
+                            'Electrostatic field, electric field strength, concept of permittivity in dielectrics',
+                            'Capacitor composite, dielectric capacitors, capacitors in series and parallel',
+                            'Energy stored in capacitors, charging and discharging of capacitors',
+                            'Electricity and Magnetism, magnetic field and Faraday\'s law, self and mutual inductance, Ampere\'s law',
+                            'Magnetic circuit, Single phase transformer, principle of operation, EMF equation, voltage ratio, current ratio, KVA rating, efficiency and regulation',
+                            'Electromechanical energy conversion'
+                        ],
+                        pedagogy: 'Interactive Lectures, Demonstration, collaborative learning, hands on experiments'
+                    },
+                    {
+                        title: 'AC CIRCUITS',
+                        hours: '09 Hours',
+                        topics: [
+                            'AC waveform definitions, form factor, peak factor',
+                            'Study of R-L, R-C, RLC series circuit, R-L-C parallel circuit',
+                            'Phase representation in polar and rectangular form',
+                            'Concept of impedance, admittance, active, reactive, apparent and complex power, power factor',
+                            '3 phase Balanced AC Circuits (⅄-∆&⅄-⅄)'
+                        ],
+                        pedagogy: 'Interactive Lectures, peer discussions, practical demonstrations, hands on experiments'
+                    },
+                    {
+                        title: 'MEASUREMENTS AND SENSORS',
+                        hours: '09 Hours',
+                        topics: [
+                            'Introduction to measuring devices/sensors and transducers (Piezoelectric and thermo-couple) related to electrical signals',
+                            'Elementary methods for the measurement of electrical quantities in DC and AC systems (Current & Single- phase power)',
+                            'Electrical Wiring and Illumination system: Basic layout of the distribution system, Types of Wiring System &Wiring Accessories, Necessity of earthing, Types of earthing, Safety devices & system'
+                        ],
+                        pedagogy: 'Interactive lectures, practical demonstrations, case studies'
+                    }
+                ]
+            }
+        };
+
+        // Open syllabus modal
+        document.querySelectorAll('.syllabus-card').forEach(card => {
+            card.addEventListener('click', function() {
+                const subject = this.getAttribute('data-subject');
+                openSyllabusModal(subject);
+            });
+        });
+
+        // Close modal when clicking the close button
+        closeModal.addEventListener('click', function() {
+            syllabusModal.style.display = 'none';
+        });
+
+        // Close modal when clicking outside the modal content
+        window.addEventListener('click', function(event) {
+            if (event.target === syllabusModal) {
+                syllabusModal.style.display = 'none';
+            }
+        });
+
+        // Function to open syllabus modal with content
+        function openSyllabusModal(subject) {
+            const syllabus = syllabusData[subject];
+            if (!syllabus) {
+                alert('Syllabus not available for this subject yet.');
+                return;
+            }
+
+            modalSubject.textContent = `${syllabus.title} - Syllabus`;
+            
+            let content = `
+                <div class="syllabus-details">
+                    <h3>Course Details</h3>
+                    <p><strong>Course Code:</strong> ${syllabus.code}</p>
+                    <p><strong>Total Contact Hours:</strong> ${syllabus.hours}</p>
+                </div>
+            `;
+
+            syllabus.units.forEach((unit, index) => {
+                content += `
+                    <div class="syllabus-unit">
+                        <div class="unit-header">
+                            <h4>UNIT ${index + 1}: ${unit.title}</h4>
+                            <span class="unit-hours">${unit.hours}</span>
+                        </div>
+                        <div class="unit-content">
+                            <ul class="unit-topics">
+                                ${unit.topics.map(topic => `<li><i class="fas fa-check-circle"></i> ${topic}</li>`).join('')}
+                            </ul>
+                `;
+
+                if (unit.labPractice) {
+                    content += `
+                        <div class="lab-practice">
+                            <h5><i class="fas fa-flask"></i> Lab Practice</h5>
+                            <ul class="unit-topics">
+                                ${unit.labPractice.map(practice => `<li><i class="fas fa-vial"></i> ${practice}</li>`).join('')}
+                            </ul>
+                        </div>
+                    `;
+                }
+
+                if (unit.pedagogy) {
+                    content += `
+                        <div class="pedagogy">
+                            <h5><i class="fas fa-chalkboard-teacher"></i> Pedagogy</h5>
+                            <p>${unit.pedagogy}</p>
+                        </div>
+                    `;
+                }
+
+                content += `</div></div>`;
+            });
+
+            modalBody.innerHTML = content;
+            syllabusModal.style.display = 'block';
+        }
+
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Populate attendance table on page load
+            populateAttendanceTable();
+            
+            // Set default sort button as active
+            document.getElementById('sortDefault').classList.add('active');
+            
+            // Add bounce-in animation to initial cards
+            const initialCards = document.querySelectorAll('.module-card, .syllabus-card');
+            initialCards.forEach((card, index) => {
+                card.style.animationDelay = `${index * 0.1}s`;
+                card.classList.add('bounce-in');
+            });
+        });
+
+        // Button hover effects
+        document.querySelectorAll('.btn').forEach(button => {
+            button.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-3px)';
+            });
+            
+            button.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script></div> <script>
+    // 1. YOUR CONFIGURATION
+    const ALLOWED_DOMAIN = "@jainuniversity.ac.in";
+    const SPECIFIC_EMAIL = "juug25btech26920@jainuniversity.ac.in"; // Your specific email
+
+        // 3. THE SECURITY CHECK
+        // We check if the email is YOURS specificially OR ends with the university domain
+        if (userEmail === SPECIFIC_EMAIL || userEmail.endsWith(ALLOWED_DOMAIN)) {
+
+            // SUCCESS: Hide login, show app
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('main-app-container').style.display = 'block';
+
+            // Optional: Update the "User Info" in the sidebar with their real name
+            // (This finds your sidebar profile name and updates it)
+            const profileName = document.querySelector('.user-info div[style="font-weight: 600;"]');
+            if(profileName) profileName.innerText = userName;
+
+        } else {
+            // FAIL
+            const errorMsg = document.getElementById('login-error');
+            errorMsg.innerText = "Access Denied: Please use your Jain University email.";
+            errorMsg.style.display = "block";
+        }
+    }
+
+    // JWT Decoder Utility
+    function decodeJwtResponse(token) {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+
+<script>
+    // !!! PASTE YOUR GOOGLE SHEET CSV LINK HERE !!!
+    // It should look like: "https://docs.google.com/.../pub?output=csv"
+    const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJZEc5QIfbmiPeqmzUnIDaUOStCoTiYHZJofS9qJ9-nUjOqtQ3EvsihvdHjqzHAuSRY3_tZ-QWK4NI/pub?output=csv"
+    function loadSchedule() {
+        console.log("Attempting to load schedule..."); // Debug message
+
+        Papa.parse(SHEET_URL, {
+            download: true,
+            header: true,
+            skipEmpty   Lines: true,
+            complete: function(results) {
+                console.log("Data loaded!", results.data); // Debug message
+                
+                const tableBody = document.querySelector("#dynamic-schedule tbody");
+                
+                // Safety Check
+                if (!tableBody) {
+                    console.error("Error: Could not find <tbody>. Check if your table has id='dynamic-schedule'");
+                    return;
+                }
+
+                tableBody.innerHTML = ""; // Clear any old hardcoded rows
+
+                results.data.forEach(row => {
+                    // Skip rows if 'Day' is missing
+                    if (!row.Day || row.Day.trim() === "") return;
+
+                    const tr = document.createElement("tr");
+
+                    // We build the row exactly matching your headers
+                    // Notice we insert the BREAK and LUNCH cells automatically!
+                    tr.innerHTML = `
+                        <td class="day-header" style="font-weight:bold;">${row.Day}</td>
+
+                        <td class="subject-cell" style="background: #e0f2fe; color: #0369a1;">${row.P1 || '-'}</td>
+                        <td class="subject-cell" style="background: #fef3c7; color: #92400e;">${row.P2 || '-'}</td>
+
+                        <td class="break-cell" style="background: #fef3c7; color: #92400e; font-size: 0.8rem; font-weight:bold; writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);">BREAK</td>
+
+                        <td class="subject-cell" style="background: #dcfce7; color: #166534;">${row.P3 || '-'}</td>
+                        <td class="subject-cell" style="background: #dcfce7; color: #166534;">${row.P4 || '-'}</td>
+
+                        <td class="lunch-cell" style="background: #d1fae5; color: #065f46; font-size: 0.8rem; font-weight:bold; writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg);">LUNCH</td>
+
+                        <td class="subject-cell" style="background: #fce7f3; color: #9d174d;">${row.P5 || '-'}</td>
+                        <td class="subject-cell" style="background: #fef7cd; color: #854d0e;">${row.P6 || '-'}</td>
+                    `;
+                    
+                    tableBody.appendChild(tr);
+                });
+            },
+            error: function(err) {
+                console.error("Error loading Google Sheet:", err);
+            }
+        });
+    }
+
+    // Run when page loads
+    document.addEventListener('DOMContentLoaded', loadSchedule);
+</script><script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+
+<script>
+    // =================================================
+    // 1. CONFIGURATION
+    // =================================================
+    // Paste your Schedule CSV Link here
+    const SCHEDULE_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJZEc5QIfbmiPeqmzUnIDaUOStCoTiYHZJofS9qJ9-nUjOqtQ3EvsihvdHjqzHAuSRY3_tZ-QWK4NI/pub?output=csv";
+    
+    // Attendance Link (Leave empty if you don't have one yet)
+    const ATTENDANCE_SHEET_URL = ""; 
+
+    // =================================================
+    // 2. WHITELIST & LOGIN
+    // =================================================
+    const WHITELIST = [
+        { name: "DHEYANESH.MS", email: "juug25btech11186@jainuniversity.ac.in" },
+        { name: "ANANY MANGAL", email: "juug25btech26920@jainuniversity.ac.in" },
+        // ... Add other students here ...
+        { name: "REUBEN RAJU", email: "juug25btech11580@jainuniversity.ac.in" }
+    ];
+
+    const ADMIN_EMAIL = "juug25btech26920@jainuniversity.ac.in"; 
+
+    function handleCredentialResponse(response) {
+        const responsePayload = decodeJwtResponse(response.credential);
+        const userEmail = responsePayload.email.toLowerCase().trim();
+        
+        // Admin Check
+        if (userEmail === ADMIN_EMAIL) {
+            if(confirm(`Welcome Admin! Go to Dashboard?`)) {
+                window.location.href = "http://127.0.0.1:5000/admin"; 
+                return; 
+            }
+        }
+
+        // Student Check
+        const validUser = WHITELIST.find(student => student.email === userEmail);
+        if (validUser) {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('main-app-container').style.display = 'block';
+            showWelcome(validUser.name);
+            const profileName = document.querySelector('.user-info div[style="font-weight: 600;"]');
+            if(profileName) profileName.innerText = validUser.name;
+        } else {
+            const errorMsg = document.getElementById('login-error');
+            if(errorMsg) {
+                errorMsg.style.display = "block";
+                errorMsg.innerHTML = `<i class="fas fa-lock"></i> Access Denied: ${userEmail}`;
+            } else {
+                alert(`Access Denied: ${userEmail}`);
+            }
+        }
+    }
+
+    function showWelcome(name) {
+        const modal = document.getElementById('welcome-modal');
+        const title = document.getElementById('welcome-title');
+        const userText = document.getElementById('welcome-user');
+        
+        if (title) title.innerText = `Welcome, ${name.split(' ')[0]}!`;
+        if (userText) userText.innerText = "Welcome back to your CSBS Portal.";
+        
+        if (modal) {
+            modal.style.display = 'block';
+            setTimeout(() => { modal.style.display = 'none'; }, 3000);
+        }
+    }
+
+    function decodeJwtResponse(token) {
+        var base64Url = token.split('.')[1];
+        var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        return JSON.parse(jsonPayload);
+    }
+
+    // =================================================
+    // 3. BACKEND LOADERS (Modules, Assignments, etc.)
+    // =================================================
+    async function loadModules() {
+        try {
+            const response = await fetch('http://127.0.0.1:5000/api/modules');
+            const modules = await response.json();
+            const container = document.getElementById('modules-container') || document.querySelector('.modules-grid');
+            
+            if(container) {
+                container.innerHTML = ''; 
+                modules.forEach(module => {
+                    const topicsHTML = module.topics.map(t => {
+                        // Handle Object vs String topics
+                        const name = (typeof t === 'object') ? t.name : t;
+                        const url = (typeof t === 'object') ? t.url : '';
+                        
+                        if (url) return `<li><i class="fas fa-check-circle"></i> <a href="${url}" target="_blank" style="color: #2563eb; text-decoration: underline; font-weight: bold;">${name}</a></li>`;
+                        return `<li><i class="fas fa-check-circle"></i> ${name}</li>`;
+                    }).join('');
+
+                    container.innerHTML += `
+                    <div class="module-card">
+                        <div class="module-header" style="background: ${module.color};">
+                            <div class="module-icon"><i class="${module.icon}"></i></div>
+                            <div class="module-info"><h3>${module.code}</h3><p>${module.title}</p></div>
+                        </div>
+                        <div class="module-content"><ul class="module-topics">${topicsHTML}</ul></div>
+                    </div>`;
+                });
+            }
+        } catch (e) { 
+            console.error("Modules Error:", e);
+            const c = document.getElementById('modules-container');
+            if(c) c.innerHTML = '<p style="color:red; padding:20px;">Connection Error: Is server.py running?</p>';
+        }
+    }
+
+    async function loadAssignments() {
+        try {
+            const res = await fetch('http://127.0.0.1:5000/api/assignments');
+            const data = await res.json();
+            const container = document.getElementById('assignments-container');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            if (data.length === 0) {
+                container.innerHTML = `<div class="no-assignment" style="text-align:center; padding:20px; color:gray;"><i class="fas fa-check-circle" style="font-size:2rem; margin-bottom:10px;"></i><p>No Active Assignments</p></div>`;
+            } else {
+                data.forEach(item => {
+                    container.innerHTML += `
+                    <div class="assignment-card">
+                        <h3>${item.subject_code} - ${item.title}</h3>
+                        <div class="assignment-meta"><div class="due-date">Due: ${item.date}</div><div class="status pending">${item.status}</div></div>
+                    </div>`;
+                });
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function loadProjects() {
+        try {
+            const res = await fetch('http://127.0.0.1:5000/api/projects');
+            const data = await res.json();
+            const container = document.getElementById('projects-container');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            if (data.length === 0) {
+                container.innerHTML = `<div class="no-assignment" style="text-align:center; padding:20px; color:gray;"><i class="fas fa-tasks" style="font-size:2rem; margin-bottom:10px;"></i><p>No Active Projects</p></div>`;
+            } else {
+                data.forEach(item => {
+                    container.innerHTML += `
+                    <div class="assignment-card">
+                        <h3>${item.subject_code} - ${item.title}</h3>
+                        <div class="assignment-meta"><div class="due-date">Due: ${item.date}</div></div>
+                    </div>`;
+                });
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    async function loadExams() {
+        try {
+            const res = await fetch('http://127.0.0.1:5000/api/exams');
+            const data = await res.json();
+            const container = document.getElementById('exams-container');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            data.forEach(item => {
+                container.innerHTML += `<tr><td>${item.subject_code}</td><td>${item.title}</td><td>${item.date}</td><td>${item.status}</td></tr>`;
+            });
+        } catch (e) { console.error(e); }
+    }
+
+    // =================================================
+    // 4. SCHEDULE & ATTENDANCE
+    // =================================================
+    function loadSchedule() {
+        if (typeof Papa === 'undefined') return;
+        if (SCHEDULE_SHEET_URL.includes("YOUR_SCHEDULE_LINK")) return;
+
+        Papa.parse(SCHEDULE_SHEET_URL, {
+            download: true, header: true, skipEmptyLines: true,
+            complete: function(results) {
+                const tableBody = document.querySelector("#dynamic-schedule tbody");
+                if (!tableBody) return;
+                tableBody.innerHTML = ""; 
+                results.data.forEach(row => {
+                    if (!row.Day) return;
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `<td class="day-header">${row.Day}</td><td class="subject-cell">${row.P1||'-'}</td><td class="subject-cell">${row.P2||'-'}</td><td class="break-cell">BREAK</td><td class="subject-cell">${row.P3||'-'}</td><td class="subject-cell">${row.P4||'-'}</td><td class="lunch-cell">LUNCH</td><td class="subject-cell">${row.P5||'-'}</td><td class="subject-cell">${row.P6||'-'}</td>`;
+                    tableBody.appendChild(tr);
+                });
+            }
+        });
+    }
+
+    function loadAttendance() {
+        if (typeof Papa === 'undefined' || ATTENDANCE_SHEET_URL === "") return;
+        Papa.parse(ATTENDANCE_SHEET_URL, {
+            download: true, header: true, skipEmptyLines: true,
+            complete: function(results) {
+                const tableBody = document.querySelector('#attendanceTable tbody');
+                if (!tableBody) return;
+                tableBody.innerHTML = ""; 
+                results.data.forEach((row, index) => {
+                    if (!row.Name) return;
+                    // Auto-detect columns
+                    const percent = row.Percentage || row['Total %'] || row['Overall %'] || 0;
+                    const tr = document.createElement("tr");
+                    if (parseFloat(percent) < 75) tr.classList.add('low-attendance');
+                    tr.innerHTML = `<td>${index + 1}</td><td>${row.USN||'-'}</td><td>${row.Name}</td><td>${parseFloat(percent)}%</td><td>${parseFloat(percent)}%</td>`;
+                    tableBody.appendChild(tr);
+                });
+            }
+        });
+    }
+
+    // =================================================
+    // 5. START APP
+    // =================================================
+    document.addEventListener('DOMContentLoaded', () => {
+        loadModules();
+        loadAssignments();
+        loadProjects();
+        loadExams();
+        loadSchedule();
+        loadAttendance();
+    });
+
+    // Sidebar Navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
+            document.querySelectorAll('.content-section').forEach(sec => sec.classList.remove('active'));
+            this.classList.add('active');
+            const targetId = this.getAttribute('data-target');
+            document.getElementById(targetId).classList.add('active');
+            
+            const headerText = this.querySelector('span').textContent;
+            const iconClass = this.querySelector('i').className;
+            const h2 = document.querySelector('.content-header h2');
+            if(h2) h2.innerHTML = `<i class="${iconClass}"></i> ${headerText}`;
+        });
+    });
+
+
+
+// =================================================
+    // 1. CONFIGURATION (Paste this at the TOP of the script)
+    // =================================================
+    const SCHEDULE_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQJZEc5QIfbmiPeqmzUnIDaUOStCoTiYHZJofS9qJ9-nUjOqtQ3EvsihvdHjqzHAuSRY3_tZ-QWK4NI/pub?output=csv";
+    
+    // Attendance Link (Empty for now)
+    const ATTENDANCE_SHEET_URL = ""; 
+
+    // =================================================
+    // 2. SCHEDULE LOGIC (The Function)
+    // =================================================
+    function loadSchedule() {
+        if (typeof Papa === 'undefined') return console.error("PapaParse not loaded");
+        
+        Papa.parse(SCHEDULE_SHEET_URL, {
+            download: true, header: true, skipEmptyLines: true,
+            complete: function(results) {
+                const tbody = document.querySelector("#dynamic-schedule tbody");
+                if(!tbody) return;
+                tbody.innerHTML = ""; 
+                results.data.forEach(row => {
+                    if(!row.Day) return;
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td class="day-header">${row.Day}</td>
+                        <td class="subject-cell">${row.P1 || '-'}</td>
+                        <td class="subject-cell">${row.P2 || '-'}</td>
+                        <td class="break-cell" style="writing-mode: vertical-rl; transform: rotate(180deg);">BREAK</td>
+                        <td class="subject-cell">${row.P3 || '-'}</td>
+                        <td class="subject-cell">${row.P4 || '-'}</td>
+                        <td class="lunch-cell" style="writing-mode: vertical-rl; transform: rotate(180deg);">LUNCH</td>
+                        <td class="subject-cell">${row.P5 || '-'}</td>
+                        <td class="subject-cell">${row.P6 || '-'}</td>`;
+                    tbody.appendChild(tr);
+                });
+            }
+        });
+    }</script>
+</body>
+</html>

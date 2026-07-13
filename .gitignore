@@ -1,0 +1,29 @@
+# --- Secrets & environment ---
+.env
+.env.*
+!.env.example
+
+# --- Database & data (contains real content; back up separately) ---
+data/
+*.db
+*.sqlite
+*.sqlite3
+
+# --- Uploaded course materials (large binaries; upload to host directly) ---
+static/uploads/*
+!static/uploads/.gitkeep
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# --- OS / editor cruft ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

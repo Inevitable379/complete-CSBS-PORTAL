@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CSBS Portal | Login</title>
+    <meta name="description" content="Sign in to the CSBS Student Portal" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
+    <link rel="stylesheet" href="/static/css/base.css" />
+    <link rel="stylesheet" href="/static/css/components.css" />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: auto;
+            position: relative;
+        }
+
+        /* Animated gradient orbs */
+        body::before, body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(100px);
+            opacity: 0.15;
+            z-index: 0;
+            pointer-events: none;
+        }
+        body::before {
+            width: 500px; height: 500px;
+            background: var(--accent);
+            top: -150px; right: -100px;
+            animation: orbFloat 12s ease-in-out infinite alternate;
+        }
+        body::after {
+            width: 400px; height: 400px;
+            background: var(--violet);
+            bottom: -100px; left: -80px;
+            animation: orbFloat 10s ease-in-out infinite alternate-reverse;
+        }
+
+        @keyframes orbFloat {
+            0%   { transform: translate(0, 0) scale(1); }
+            100% { transform: translate(40px, -30px) scale(1.1); }
+        }
+
+        /* Login Card */
+        .login-card {
+            position: relative;
+            z-index: 1;
+            background: var(--bg-1);
+            border: 1px solid var(--border);
+            border-radius: var(--r-lg);
+            padding: 48px 40px;
+            width: 100%;
+            max-width: 420px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: var(--shadow-lg);
+            animation: cardEntry 0.6s var(--ease-out) forwards;
+            opacity: 0;
+            transform: translateY(16px);
+        }
+
+        @keyframes cardEntry {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-logo {
+            width: 56px; height: 56px;
+            background: var(--accent-muted);
+            border: 1px solid var(--border-active);
+            border-radius: var(--r-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--accent);
+            margin-bottom: var(--sp-6);
+            box-shadow: var(--accent-glow);
+        }
+
+        .login-card h2 {
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text-1);
+            margin-bottom: var(--sp-2);
+        }
+
+        .login-card .subtitle {
+            color: var(--text-2);
+            font-size: 0.88rem;
+            text-align: center;
+            line-height: 1.5;
+            margin-bottom: var(--sp-8);
+        }
+
+        .g-wrapper {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .g_id_signin {
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Dev bypass */
+        #dev-bypass {
+            display: none;
+            margin-top: var(--sp-6);
+            width: 100%;
+        }
+
+        #dev-bypass .divider {
+            border-top: 1px solid var(--border);
+            padding-top: var(--sp-5);
+            text-align: center;
+        }
+
+        #dev-bypass .dev-label {
+            font-size: 0.75rem;
+            color: var(--text-3);
+            margin-bottom: var(--sp-3);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 500;
+        }
+
+        .dev-btn {
+            padding: var(--sp-3) var(--sp-5);
+            background: var(--bg-2);
+            color: var(--text-2);
+            border: 1px solid var(--border);
+            border-radius: var(--r-sm);
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.82rem;
+            transition: all var(--dur-instant) var(--ease-out);
+        }
+        .dev-btn:hover {
+            color: var(--text-1);
+            border-color: var(--border-hover);
+            background: var(--bg-3);
+        }
+
+        /* Error message */
+        #login-error {
+            margin-top: var(--sp-6);
+            padding: var(--sp-3) var(--sp-4);
+            border-radius: var(--r-sm);
+            background: rgba(239,68,68,0.08);
+            border: 1px solid rgba(239,68,68,0.2);
+            border-left: 3px solid var(--danger);
+            color: var(--danger);
+            font-size: 0.82rem;
+            font-weight: 500;
+            display: none;
+            width: 100%;
+            align-items: center;
+            gap: var(--sp-3);
+        }
+
+        .login-footer {
+            margin-top: var(--sp-8);
+            font-size: 0.75rem;
+            color: var(--text-3);
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            .login-card { margin: var(--sp-4); padding: 36px 24px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-logo"><i class="fas fa-graduation-cap"></i></div>
+        <h2>Welcome back</h2>
+        <p class="subtitle">Sign in with your Jain University email to access the CSBS Portal.</p>
+
+        <div id="g_id_onload"
+            data-client_id="212930513958-1mh49c4j0l3sqjbsbq5b6q1o4oav139e.apps.googleusercontent.com"
+            data-callback="handleCredentialResponse"
+            data-auto_prompt="false"
+            data-auto_select="false">
+        </div>
+
+        <div class="g-wrapper">
+            <div class="g_id_signin"
+                data-type="standard" data-size="large" data-theme="outline"
+                data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left">
+            </div>
+        </div>
+
+        <!-- Dev bypass: only visible on localhost -->
+        <div id="dev-bypass">
+            <div class="divider">
+                <p class="dev-label">Development Mode</p>
+                <button class="dev-btn" onclick="devLogin()">
+                    <i class="fas fa-code" style="margin-right:6px"></i> Skip Login (localhost only)
+                </button>
+            </div>
+        </div>
+
+        <div id="login-error">
+            <i class="fas fa-exclamation-circle"></i>
+            <span>Access Denied: You are not authorized.</span>
+        </div>
+
+        <div class="login-footer">CSBS Portal &middot; Jain University</div>
+    </div>
+
+    <script>
+        /**
+         * Google Sign-In callback — sends the raw JWT to the server.
+         * The server verifies the token against Google's public keys,
+         * checks the whitelist in the database, and sets a session cookie.
+         */
+        async function handleCredentialResponse(response) {
+            const errorMsg = document.getElementById('login-error');
+            errorMsg.style.display = 'none';
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ token: response.credential })
+                });
+
+                const data = await res.json();
+
+                if (res.ok && data.success) {
+                    window.location.href = '/';
+                } else {
+                    errorMsg.style.display = 'flex';
+                    errorMsg.querySelector('span').textContent =
+                        data.error || 'Authentication failed. Please try again.';
+                }
+            } catch (err) {
+                errorMsg.style.display = 'flex';
+                errorMsg.querySelector('span').textContent =
+                    'Network error. Please check your connection.';
+            }
+        }
+
+        /**
+         * Dev bypass — creates a server-side session via the same endpoint.
+         * Only works on localhost when the server is in dev/fallback mode.
+         */
+        async function devLogin() {
+            if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
+
+            try {
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'same-origin',
+                    body: JSON.stringify({ dev_bypass: true })
+                });
+
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    window.location.href = '/';
+                } else {
+                    const errorMsg = document.getElementById('login-error');
+                    errorMsg.style.display = 'flex';
+                    errorMsg.querySelector('span').textContent =
+                        data.error || 'Dev login failed.';
+                }
+            } catch (err) {
+                console.error('Dev login error:', err);
+            }
+        }
+
+        // Show dev bypass button on localhost
+        if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
+            document.getElementById('dev-bypass').style.display = 'block';
+        }
+
+        // If already authenticated, redirect to dashboard
+        fetch('/api/auth/check', { credentials: 'same-origin' })
+            .then(r => r.json())
+            .then(data => { if (data.authenticated) window.location.href = '/'; })
+            .catch(() => {});
+    </script>
+</body>
+</html>

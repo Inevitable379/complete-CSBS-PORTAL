@@ -1,0 +1,402 @@
+[
+    {
+        "id": 1,
+        "code": "BCSV-I",
+        "title": "Business Communication & Value Science - I",
+        "color": "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)",
+        "icon": "fas fa-comments",
+        "topics": [
+            {
+                "name": "Human Values & Self Exploration",
+                "url": "https://docs.google.com/presentation/d/1bXNmai9vsgpPBCNwXBWnGiPKCIeqvjIu/embed"
+            },
+            {
+                "name": "Grammar & Language Development",
+                "url": "/static/uploads/BCVS_Sem1_Unit2_students.pdf"
+            },
+            {
+                "name": "Business Communication Ethics",
+                "url": "/static/uploads/Module_3_new.pdf"
+            },
+            {
+                "name": "Dialogical & Persuasive Skills",
+                "url": ""
+            },
+            {
+                "name": "Professional Email Composition",
+                "url": ""
+            },
+            {
+                "name": "Journalistic Writing & Editorial Skills",
+                "url": ""
+            },
+            {
+                "name": "Application of Life Skills",
+                "url": ""
+            }
+        ],
+        "resources": []
+    },
+    {
+        "id": 2,
+        "code": "DMCS",
+        "title": "Discrete Mathematics for Computer Science",
+        "color": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        "icon": "fas fa-calculator",
+        "topics": [
+            {
+                "name": "Mathematical Logic & Propositional Calculus",
+                "url": "https://drive.google.com/file/d/1EDxGL42Yb0k7Gi9u3zledddsVJWzE_GO/preview"
+            },
+            {
+                "name": "Boolean Algebra & Logic Gates",
+                "url": "https://drive.google.com/file/d/1R7AF_4CDuCWVwL3t2Dn786bB25XpK9Qx/preview"
+            },
+            {
+                "name": "Combinatorics & Counting Principles",
+                "url": "/static/uploads/MODULE-3.pdf"
+            },
+            {
+                "name": "Graph Theory & Applications",
+                "url": "/static/uploads/Module-4_Graph_Theory.pdf"
+            },
+            {
+                "name": "Abstract Algebra & Group Theory",
+                "url": ""
+            },
+            {
+                "name": "Recurrence Relations",
+                "url": ""
+            },
+            {
+                "name": "Network Analysis using Graph Theory",
+                "url": ""
+            }
+        ],
+        "resources": []
+    },
+    {
+        "id": 3,
+        "code": "ITPSC",
+        "title": "Introductory Topics in Statistics, Probability and Calculus",
+        "color": "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+        "icon": "fas fa-chart-bar",
+        "topics": [
+            {
+                "name": "Descriptive Statistics & Data Visualization",
+                "url": "https://drive.google.com/file/d/1B-J40ug5e74pkSyCtlkmSNg9FCBD5EeM/preview"
+            },
+            {
+                "name": "Probability Theory & Bayes Theorem",
+                "url": "https://drive.google.com/file/d/1LPwiPSEkVwqBwFDZ0ECpFj_ynNP41bLQ/preview"
+            },
+            {
+                "name": "Probability Distributions",
+                "url": "/static/uploads/Module_2_Probability.pdf"
+            },
+            {
+                "name": "Differential Calculus & Applications",
+                "url": ""
+            },
+            {
+                "name": "Integral Calculus & Applications",
+                "url": ""
+            },
+            {
+                "name": "Statistical Inference",
+                "url": ""
+            },
+            {
+                "name": "Real-world Data Analysis",
+                "url": ""
+            }
+        ],
+        "resources": []
+    },
+    {
+        "id": 4,
+        "code": "PHYSICS",
+        "title": "Fundamentals of Physics",
+        "color": "linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)",
+        "icon": "fas fa-atom",
+        "topics": [
+            {
+                "name": "Oscillations & Simple Harmonic Motion",
+                "url": "https://drive.google.com/file/d/15gVnr2eSjpZARlJOsph5XcdifTIoM60w/preview"
+            },
+            {
+                "name": "Wave Optics & Interference",
+                "url": "https://drive.google.com/file/d/1KlwJggMjp7Zo00gvkTynC3L3jw_u0Q8D/preview"
+            },
+            {
+                "name": "Quantum Mechanics & Crystallography",
+                "url": ""
+            },
+            {
+                "name": "Laser Physics & Fiber Optics",
+                "url": ""
+            },
+            {
+                "name": "Thermodynamics & Electromagnetism",
+                "url": ""
+            },
+            {
+                "name": "Experimental Physics Techniques",
+                "url": ""
+            },
+            {
+                "name": "Quantum Physics & Applications",
+                "url": ""
+            }
+        ],
+        "resources": []
+    },
+    {
+        "id": 5,
+        "code": "PEE",
+        "title": "Principles of Electrical Engineering",
+        "color": "linear-gradient(135deg, #fdbb2d 0%, #22c1c3 100%)",
+        "icon": "fas fa-bolt",
+        "topics": [
+            {
+                "name": "Basic Electrical Concepts & Circuits",
+                "url": ""
+            },
+            {
+                "name": "DC Circuit Analysis & Network Theorems",
+                "url": ""
+            },
+            {
+                "name": "Electrostatics & Electromechanics",
+                "url": ""
+            },
+            {
+                "name": "AC Circuits & Power Systems",
+                "url": ""
+            },
+            {
+                "name": "Electrical Measurements & Sensors",
+                "url": ""
+            },
+            {
+                "name": "Transformers & Magnetic Circuits",
+                "url": ""
+            },
+            {
+                "name": "Electrical Safety & Wiring Systems",
+                "url": ""
+            }
+        ],
+        "resources": []
+    },
+    {
+        "id": 6,
+        "code": "IPS",
+        "title": "Introduction to Problem Solving",
+        "color": "linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)",
+        "icon": "fas fa-lightbulb",
+        "topics": [
+            {
+                "name": "Algorithm Design",
+                "url": "https://docs.google.com/presentation/d/1GC69v_IC0FnmU21Li42N9kZY51KBUl9O/embed"
+            },
+            {
+                "name": "Problem Analysis",
+                "url": "https://drive.google.com/file/d/1sEISp2NuJf-Z3YASIHAmkdOZ5d_szbge/preview"
+            },
+            {
+                "name": "Computational Thinking",
+                "url": ""
+            },
+            {
+                "name": "Algorithm Complexity",
+                "url": ""
+            },
+            {
+                "name": "Problem Solving Strategies",
+                "url": ""
+            }
+        ],
+        "resources": []
+    },
+    {
+        "id": 7,
+        "code": "IPS LAB",
+        "title": "Introduction to Problem Solving Lab",
+        "color": "linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)",
+        "icon": "fas fa-flask",
+        "topics": [
+            {
+                "name": "Python Programming",
+                "url": ""
+            },
+            {
+                "name": "Algorithm Implementation",
+                "url": ""
+            },
+            {
+                "name": "Debugging Techniques",
+                "url": ""
+            },
+            {
+                "name": "Code Optimization",
+                "url": ""
+            },
+            {
+                "name": "Problem Solving Exercises",
+                "url": ""
+            }
+        ],
+        "resources": []
+    },
+    {
+        "id": 8,
+        "code": "PHYSICS LAB",
+        "title": "Fundamentals of Physics Lab",
+        "color": "linear-gradient(135deg, #d299c2 0%, #fef9d7 100%)",
+        "icon": "fas fa-vial",
+        "topics": [
+            {
+                "name": "Measurement Techniques",
+                "url": ""
+            },
+            {
+                "name": "Experimental Physics",
+                "url": ""
+            },
+            {
+                "name": "Data Analysis",
+                "url": ""
+            },
+            {
+                "name": "Lab Safety Procedures",
+                "url": ""
+            },
+            {
+                "name": "Report Writing",
+                "url": ""
+            }
+        ],
+        "resources": []
+    },
+    {
+        "id": 9,
+        "code": "PEE LAB",
+        "title": "Principles of Electrical Engineering Lab",
+        "color": "linear-gradient(135deg, #8e2de2 0%, #4a00e0 100%)",
+        "icon": "fas fa-microchip",
+        "topics": [
+            {
+                "name": "Circuit Building",
+                "url": ""
+            },
+            {
+                "name": "Electrical Measurements",
+                "url": ""
+            },
+            {
+                "name": "Device Testing",
+                "url": ""
+            },
+            {
+                "name": "Troubleshooting",
+                "url": ""
+            },
+            {
+                "name": "Lab Experiments",
+                "url": ""
+            }
+        ],
+        "resources": []
+    },
+    {
+        "id": 10,
+        "code": "DSA",
+        "title": "Data Structures using C",
+        "color": "linear-gradient(135deg, #fc466b 0%, #3f5efb 100%)",
+        "icon": "fas fa-code",
+        "topics": [
+            {
+                "name": "Arrays and Linked Lists",
+                "url": ""
+            },
+            {
+                "name": "Stacks and Queues",
+                "url": ""
+            },
+            {
+                "name": "Trees and Graphs",
+                "url": ""
+            },
+            {
+                "name": "Sorting Algorithms",
+                "url": ""
+            },
+            {
+                "name": "Searching Algorithms",
+                "url": ""
+            }
+        ],
+        "resources": []
+    },
+    {
+        "id": 11,
+        "code": "UHV",
+        "title": "Universal Human Values",
+        "color": "linear-gradient(135deg, #3f2b96 0%, #a8c0ff 100%)",
+        "icon": "fas fa-hands-helping",
+        "topics": [
+            {
+                "name": "Ethical Values",
+                "url": ""
+            },
+            {
+                "name": "Social Responsibility",
+                "url": ""
+            },
+            {
+                "name": "Human Rights",
+                "url": ""
+            },
+            {
+                "name": "Moral Philosophy",
+                "url": ""
+            },
+            {
+                "name": "Value Education",
+                "url": ""
+            }
+        ],
+        "resources": []
+    },
+    {
+        "id": 12,
+        "code": "IC",
+        "title": "Indian Constitution",
+        "color": "linear-gradient(135deg, #c21500 0%, #ffc500 100%)",
+        "icon": "fas fa-landmark",
+        "topics": [
+            {
+                "name": "Constitutional Framework",
+                "url": ""
+            },
+            {
+                "name": "Fundamental Rights",
+                "url": ""
+            },
+            {
+                "name": "Government Structure",
+                "url": ""
+            },
+            {
+                "name": "Citizenship",
+                "url": ""
+            },
+            {
+                "name": "Constitutional Amendments",
+                "url": ""
+            }
+        ],
+        "resources": []
+    }
+]

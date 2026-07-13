@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin · CSBS Portal</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <script>
+        if (localStorage.getItem('theme') === 'dark') document.documentElement.dataset.theme = 'dark';
+    </script>
+    <style>
+        body { overflow: auto; background: var(--bg-0); }
+
+        .admin-shell { display: flex; min-height: 100vh; }
+
+        /* ── Sidebar ── */
+        .a-side {
+            width: 240px; flex-shrink: 0; background: var(--bg-1);
+            border-right: 1px solid var(--border); padding: var(--sp-5);
+            display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh;
+        }
+        .a-brand { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2) var(--sp-3); margin-bottom: var(--sp-6); }
+        .a-brand .logo { width: 34px; height: 34px; border-radius: var(--r-md); background: var(--accent); color: var(--bg-0);
+            display: grid; place-items: center; font-size: .85rem; }
+        .a-brand b { font-size: .95rem; letter-spacing: -.01em; }
+        .a-nav { display: flex; flex-direction: column; gap: 2px; }
+        .a-nav button {
+            display: flex; align-items: center; gap: var(--sp-3); width: 100%; text-align: left;
+            padding: var(--sp-3); border-radius: var(--r-sm); color: var(--text-2); font-size: .86rem; font-weight: 500;
+            transition: all var(--dur-instant) var(--ease-out);
+        }
+        .a-nav button i { width: 18px; text-align: center; }
+        .a-nav button:hover { background: var(--bg-2); color: var(--text-1); }
+        .a-nav button.active { background: var(--accent); color: var(--bg-0); }
+        .a-side-foot { margin-top: auto; padding-top: var(--sp-4); border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 2px; }
+        .a-side-foot a, .a-side-foot button { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--r-sm);
+            color: var(--text-2); font-size: .82rem; font-weight: 500; width: 100%; text-align: left; transition: all var(--dur-instant); }
+        .a-side-foot a:hover, .a-side-foot button:hover { background: var(--bg-2); color: var(--text-1); }
+
+        /* ── Main ── */
+        .a-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+        .a-top { height: 60px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between;
+            padding: 0 var(--sp-8); position: sticky; top: 0; background: color-mix(in srgb, var(--bg-0) 88%, transparent); backdrop-filter: blur(8px); z-index: 20; }
+        .a-top h1 { font-size: 1.05rem; font-weight: 600; letter-spacing: -.02em; display: flex; align-items: center; gap: var(--sp-3); }
+        .a-who { display: flex; align-items: center; gap: var(--sp-2); font-size: .82rem; color: var(--text-2); }
+        .a-who .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+        .a-body { flex: 1; padding: var(--sp-8); max-width: 780px; margin: 0 auto; width: 100%; }
+
+        .view { display: none; animation: fadeUp var(--dur-fast) var(--ease-out); }
+        .view.active { display: block; }
+
+        .lead { margin-bottom: var(--sp-6); }
+        .lead h2 { font-size: 1.4rem; font-weight: 650; letter-spacing: -.03em; margin-bottom: 4px; }
+        .lead p { color: var(--text-2); font-size: .9rem; }
+
+        .a-card { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--sp-6); }
+        .a-card + .a-card { margin-top: var(--sp-5); }
+
+        /* ── Fields ── */
+        .field { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-5); }
+        .field:last-child { margin-bottom: 0; }
+        .field label { font-size: .78rem; font-weight: 600; color: var(--text-2); }
+        .field label .hint { font-weight: 400; color: var(--text-3); }
+        .field input, .field select, .field textarea {
+            padding: var(--sp-3) var(--sp-4); background: var(--bg-0); border: 1px solid var(--border);
+            border-radius: var(--r-sm); color: var(--text-1); font-size: .9rem; font-family: inherit; width: 100%;
+            transition: border-color var(--dur-instant), box-shadow var(--dur-instant);
+        }
+        .field input:focus, .field select:focus, .field textarea:focus {
+            outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-muted);
+        }
+        .field textarea { resize: vertical; min-height: 96px; line-height: 1.5; }
+        .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+        @media (max-width: 560px) { .row2 { grid-template-columns: 1fr; } }
+
+        /* ── Buttons ── */
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+            padding: var(--sp-3) var(--sp-5); border-radius: var(--r-sm); font-size: .88rem; font-weight: 600;
+            font-family: inherit; cursor: pointer; transition: all var(--dur-instant) var(--ease-out); }
+        .btn-primary { background: var(--accent); color: var(--bg-0); width: 100%; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-primary:active { transform: scale(.99); }
+        .btn-primary:disabled { opacity: .55; cursor: not-allowed; }
+        .btn-ghost { background: var(--bg-2); color: var(--text-1); }
+        .btn-ghost:hover { background: var(--bg-3); }
+        .btn-danger { background: var(--danger-muted); color: var(--danger); padding: var(--sp-2) var(--sp-3); font-size: .78rem; font-weight: 500; }
+        .btn-danger:hover { background: color-mix(in srgb, var(--danger) 18%, transparent); }
+
+        /* ── Segmented control ── */
+        .seg { display: inline-flex; background: var(--bg-2); border-radius: var(--r-md); padding: 3px; gap: 2px; margin-bottom: var(--sp-6); flex-wrap: wrap; }
+        .seg button { padding: var(--sp-2) var(--sp-4); border-radius: var(--r-sm); font-size: .82rem; font-weight: 500; color: var(--text-2); }
+        .seg button:hover { color: var(--text-1); }
+        .seg button.active { background: var(--bg-0); color: var(--text-1); box-shadow: var(--shadow-sm); font-weight: 600; }
+
+        /* ── Upload mode toggle ── */
+        .modeswitch { display: flex; gap: var(--sp-2); margin-bottom: var(--sp-4); }
+        .modeswitch button { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--sp-2);
+            padding: var(--sp-3); border: 1px solid var(--border); border-radius: var(--r-sm); font-size: .84rem; font-weight: 500; color: var(--text-2); }
+        .modeswitch button.active { border-color: var(--accent); color: var(--text-1); background: var(--accent-muted); font-weight: 600; }
+
+        /* ── Dropzone ── */
+        .dropzone { border: 2px dashed var(--border-hover); border-radius: var(--r-md); padding: var(--sp-10) var(--sp-6);
+            text-align: center; cursor: pointer; transition: all var(--dur-fast) var(--ease-out); background: var(--bg-0); }
+        .dropzone:hover { border-color: var(--accent); background: var(--accent-muted); }
+        .dropzone.drag { border-color: var(--accent); background: var(--accent-muted); transform: scale(1.005); }
+        .dropzone .dz-ic { font-size: 1.8rem; color: var(--text-3); margin-bottom: var(--sp-3); }
+        .dropzone.drag .dz-ic { color: var(--accent); }
+        .dropzone b { font-size: .92rem; }
+        .dropzone .sub { font-size: .78rem; color: var(--text-3); margin-top: 4px; }
+        .dz-picked { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-4); border: 1px solid var(--border);
+            border-radius: var(--r-md); background: var(--bg-0); }
+        .dz-picked .fic { width: 40px; height: 40px; border-radius: var(--r-sm); background: var(--danger-muted); color: var(--danger); display: grid; place-items: center; }
+        .dz-picked .meta { flex: 1; min-width: 0; text-align: left; }
+        .dz-picked .meta b { display: block; font-size: .85rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .dz-picked .meta span { font-size: .75rem; color: var(--text-3); }
+
+        .progress { height: 6px; background: var(--bg-3); border-radius: var(--r-full); overflow: hidden; margin-top: var(--sp-4); }
+        .progress .bar { height: 100%; width: 0; background: var(--accent); border-radius: var(--r-full); transition: width .15s linear; }
+
+        .result { margin-top: var(--sp-4); padding: var(--sp-4); border-radius: var(--r-md); border: 1px solid var(--border);
+            background: var(--success-muted); display: flex; align-items: center; gap: var(--sp-3); }
+        .result i.ok { color: var(--success); font-size: 1.1rem; }
+        .result a { color: var(--accent); font-weight: 600; text-decoration: underline; }
+
+        /* ── Tables / lists ── */
+        .a-list { display: flex; flex-direction: column; gap: var(--sp-2); }
+        .a-item { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border: 1px solid var(--border);
+            border-radius: var(--r-md); background: var(--bg-0); }
+        .a-item .txt { flex: 1; min-width: 0; }
+        .a-item .txt b { font-size: .88rem; }
+        .a-item .txt span { display: block; font-size: .76rem; color: var(--text-3); margin-top: 2px; }
+        .a-group-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--text-3);
+            font-weight: 600; margin: var(--sp-5) 0 var(--sp-2); }
+        .a-empty { text-align: center; padding: var(--sp-10); color: var(--text-3); }
+        .a-empty i { font-size: 1.8rem; display: block; margin-bottom: var(--sp-3); }
+
+        .chip { font-size: .68rem; font-weight: 600; padding: 2px 8px; border-radius: var(--r-full); background: var(--bg-2); color: var(--text-2); text-transform: capitalize; }
+        .chip.urgent { background: var(--danger-muted); color: var(--danger); }
+
+        /* topic manager */
+        .topic-row { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) 0; border-bottom: 1px solid var(--border); font-size: .84rem; }
+        .topic-row:last-child { border-bottom: none; }
+        .topic-row .tstate { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+        .topic-row .tstate.has { background: var(--success); }
+        .topic-row .tstate.no { background: var(--border-active); }
+        .topic-row .tname { flex: 1; }
+        .topic-row a { color: var(--accent); font-size: .74rem; }
+
+        /* ── Toast ── */
+        .toast-wrap { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 10px; z-index: 2000; }
+        .toast { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); border-radius: var(--r-md);
+            background: var(--bg-1); border: 1px solid var(--border); box-shadow: var(--shadow-lg); font-size: .85rem; min-width: 240px;
+            animation: slideDown var(--dur-fast) var(--ease-out); }
+        .toast.ok i { color: var(--success); }
+        .toast.err i { color: var(--danger); }
+        .toast.info i { color: var(--info); }
+
+        /* ── Confirm modal ── */
+        .backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; place-items: center; z-index: 3000; }
+        .backdrop.open { display: grid; }
+        .confirm { background: var(--bg-1); border: 1px solid var(--border); border-radius: var(--r-lg); padding: var(--sp-6);
+            max-width: 380px; width: calc(100% - 32px); box-shadow: var(--shadow-xl); animation: scaleIn var(--dur-fast) var(--ease-out); }
+        .confirm h3 { font-size: 1rem; margin-bottom: var(--sp-2); }
+        .confirm p { font-size: .86rem; color: var(--text-2); margin-bottom: var(--sp-5); line-height: 1.5; }
+        .confirm .actions { display: flex; gap: var(--sp-3); justify-content: flex-end; }
+        .confirm .actions .btn { width: auto; padding: var(--sp-2) var(--sp-5); }
+        .confirm .del { background: var(--danger); color: #fff; }
+
+        @media (max-width: 820px) {
+            .a-side { position: fixed; left: -260px; z-index: 100; transition: left var(--dur-fast); box-shadow: var(--shadow-xl); }
+            .a-side.open { left: 0; }
+            .a-body { padding: var(--sp-5); }
+            .menu-btn { display: inline-flex !important; }
+        }
+        .menu-btn { display: none; }
+    </style>
+</head>
+<body>
+    <div class="admin-shell">
+        <!-- Sidebar -->
+        <aside class="a-side" id="side">
+            <div class="a-brand"><div class="logo"><i class="fas fa-shield-halved"></i></div><b>Admin</b></div>
+            <nav class="a-nav">
+                <button class="active" data-view="upload" onclick="switchView('upload')"><i class="fas fa-cloud-arrow-up"></i> Upload material</button>
+                <button data-view="post" onclick="switchView('post')"><i class="fas fa-pen-nib"></i> Post update</button>
+                <button data-view="manage" onclick="switchView('manage')"><i class="fas fa-list-check"></i> Manage content</button>
+                <button data-view="courses" onclick="switchView('courses')"><i class="fas fa-cubes"></i> Courses &amp; topics</button>
+            </nav>
+            <div class="a-side-foot">
+                <a href="/"><i class="fas fa-arrow-left"></i> Back to portal</a>
+                <button onclick="logout()"><i class="fas fa-right-from-bracket"></i> Sign out</button>
+            </div>
+        </aside>
+
+        <!-- Main -->
+        <main class="a-main">
+            <div class="a-top">
+                <h1><button class="btn menu-btn btn-ghost" onclick="document.getElementById('side').classList.toggle('open')"><i class="fas fa-bars"></i></button> <span id="topTitle">Upload material</span></h1>
+                <div class="a-who"><span class="dot"></span> <span id="whoName">Admin</span></div>
+            </div>
+
+            <div class="a-body">
+
+                <!-- ===== UPLOAD ===== -->
+                <section id="view-upload" class="view active">
+                    <div class="lead"><h2>Upload material</h2><p>Attach a PDF, slide deck or link to any course topic. New topic names are created automatically.</p></div>
+                    <div class="a-card">
+                        <div class="row2">
+                            <div class="field">
+                                <label>Course</label>
+                                <select id="uCourse" onchange="onCourseChange()"></select>
+                            </div>
+                            <div class="field">
+                                <label>Topic <span class="hint">pick one or type a new name</span></label>
+                                <input id="uTopic" list="uTopicList" placeholder="e.g. Unit 3: Graph Theory" autocomplete="off">
+                                <datalist id="uTopicList"></datalist>
+                            </div>
+                        </div>
+
+                        <div class="modeswitch">
+                            <button id="mode-file" class="active" onclick="setMode('file')"><i class="fas fa-file-arrow-up"></i> Upload file</button>
+                            <button id="mode-link" onclick="setMode('link')"><i class="fas fa-link"></i> Paste link</button>
+                        </div>
+
+                        <!-- File mode -->
+                        <div id="fileMode">
+                            <input type="file" id="fileInput" hidden accept=".pdf,.ppt,.pptx,.doc,.docx,.png,.jpg,.jpeg" onchange="onFilePicked(this.files[0])">
+                            <div class="dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                                <div class="dz-ic"><i class="fas fa-cloud-arrow-up"></i></div>
+                                <b>Drag a file here, or click to browse</b>
+                                <div class="sub">PDF, PPT, DOC or image · up to 25 MB</div>
+                            </div>
+                            <div class="progress hidden" id="progWrap"><div class="bar" id="progBar"></div></div>
+                        </div>
+
+                        <!-- Link mode -->
+                        <div id="linkMode" class="hidden">
+                            <div class="field">
+                                <label>Google Drive or external URL</label>
+                                <input type="url" id="uLink" placeholder="https://drive.google.com/file/d/.../view">
+                                <span style="font-size:.76rem;color:var(--text-3)"><i class="fas fa-circle-info"></i> Drive share links auto-convert to a clean preview.</span>
+                            </div>
+                        </div>
+
+                        <div id="uResult"></div>
+                        <div style="margin-top:var(--sp-5)"><button class="btn btn-primary" id="uBtn" onclick="doUpload()"><i class="fas fa-cloud-arrow-up"></i> Upload &amp; attach</button></div>
+                    </div>
+                </section>
+
+                <!-- ===== POST ===== -->
+                <section id="view-post" class="view">
+                    <div class="lead"><h2>Post an update</h2><p>Add an assignment, project, exam or announcement.</p></div>
+                    <div class="seg" id="postSeg">
+                        <button class="active" onclick="setPostType('assignments', this)">Assignment</button>
+                        <button onclick="setPostType('projects', this)">Project</button>
+                        <button onclick="setPostType('exams', this)">Exam</button>
+                        <button onclick="setPostType('announcement', this)">Announcement</button>
+                    </div>
+                    <div class="a-card"><div id="postFields"></div>
+                        <div style="margin-top:var(--sp-5)"><button class="btn btn-primary" id="postBtn" onclick="submitPost()"><i class="fas fa-plus"></i> Publish</button></div>
+                    </div>
+                </section>
+
+                <!-- ===== MANAGE ===== -->
+                <section id="view-manage" class="view">
+                    <div class="lead"><h2>Manage content</h2><p>Review and remove anything you've posted.</p></div>
+                    <div class="seg" id="manageSeg">
+                        <button class="active" onclick="setManage('assignments', this)">Assignments</button>
+                        <button onclick="setManage('announcements', this)">Announcements</button>
+                        <button onclick="setManage('exams', this)">Exams</button>
+                        <button onclick="setManage('projects', this)">Projects</button>
+                    </div>
+                    <div id="manageList"><div class="a-empty"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div>
+                </section>
+
+                <!-- ===== COURSES ===== -->
+                <section id="view-courses" class="view">
+                    <div class="lead"><h2>Courses &amp; topics</h2><p>Add a course, or expand one to manage its topics.</p></div>
+                    <div class="a-card">
+                        <div class="row2">
+                            <div class="field"><label>Course code</label><input id="cCode" placeholder="e.g. OOP"></div>
+                            <div class="field"><label>Semester</label>
+                                <select id="cSem"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select>
+                            </div>
+                        </div>
+                        <div class="field"><label>Course title</label><input id="cTitle" placeholder="e.g. Object Oriented Programming"></div>
+                        <div class="row2">
+                            <div class="field"><label>Credits</label><input type="number" id="cCredits" min="0" max="20" value="0" placeholder="e.g. 4"></div>
+                            <div class="field"><label>CA / Internal marks <span class="hint">e.g. CIA1: 30, CIA2: 30, Attendance: 10</span></label><input id="cInternalMarks" placeholder="e.g. CIA1: 30, CIA2: 30, Attendance: 10"></div>
+                        </div>
+                        <div class="field"><label>Icon <span class="hint">Font Awesome class</span></label><input id="cIcon" value="fas fa-book"></div>
+                        <div class="field"><label>Topics <span class="hint">one per line — optional</span></label><textarea id="cTopics" placeholder="Unit 1: Introduction&#10;Unit 2: Classes &amp; Objects"></textarea></div>
+                        <button class="btn btn-primary" id="cBtn" onclick="submitCourse()"><i class="fas fa-plus"></i> Add course</button>
+                    </div>
+                    <div class="a-card"><div id="courseList"><div class="a-empty"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div></div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <div class="toast-wrap" id="toasts"></div>
+    <div class="backdrop" id="confirmBackdrop"><div class="confirm">
+        <h3 id="cfTitle">Are you sure?</h3><p id="cfMsg"></p>
+        <div class="actions"><button class="btn btn-ghost" onclick="closeConfirm(false)">Cancel</button><button class="btn del" onclick="closeConfirm(true)">Delete</button></div>
+    </div></div>
+
+    <script>
+        // ── Helpers ──
+        const $ = s => document.querySelector(s);
+        function esc(v){ if(v==null) return ''; const d=document.createElement('div'); d.textContent=String(v); return d.innerHTML; }
+        async function fetchJSON(url, opts={}){
+            const res = await fetch(url, { credentials:'same-origin', ...opts });
+            let data = {}; try { data = await res.json(); } catch(_){}
+            if(!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+            return data;
+        }
+        function toast(msg, type='ok'){
+            const el = document.createElement('div');
+            el.className = `toast ${type}`;
+            const ic = type==='err'?'fa-circle-xmark':type==='info'?'fa-circle-info':'fa-circle-check';
+            el.innerHTML = `<i class="fas ${ic}"></i><span>${esc(msg)}</span>`;
+            $('#toasts').appendChild(el);
+            setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(6px)'; el.style.transition='all .3s'; setTimeout(()=>el.remove(),300); }, 3800);
+        }
+        let _cf = null;
+        function confirmDialog(msg, title='Delete this?'){
+            $('#cfTitle').textContent = title; $('#cfMsg').textContent = msg;
+            $('#confirmBackdrop').classList.add('open');
+            return new Promise(r => { _cf = r; });
+        }
+        function closeConfirm(v){ $('#confirmBackdrop').classList.remove('open'); if(_cf){ _cf(v); _cf=null; } }
+
+        // ── State ──
+        let courses = [];
+
+        // ── Init ──
+        document.addEventListener('DOMContentLoaded', init);
+        async function init(){
+            try {
+                const auth = await fetchJSON('/api/auth/check');
+                if(!auth.is_admin){ location.href = '/login.html'; return; }
+                $('#whoName').textContent = auth.name || auth.email || 'Admin';
+            } catch(_){ location.href = '/login.html'; return; }
+            await loadCourses();
+            renderPostFields('assignments');
+        }
+
+        async function loadCourses(){
+            try { courses = await fetchJSON('/api/modules'); } catch(e){ courses=[]; toast('Could not load courses','err'); }
+            // upload course dropdown
+            const sel = $('#uCourse');
+            sel.innerHTML = courses.map(c=>`<option value="${esc(c.code)}">${esc(c.code)} — ${esc(c.title)}</option>`).join('');
+            onCourseChange();
+        }
+
+        // ── View switching ──
+        const TITLES = { upload:'Upload material', post:'Post update', manage:'Manage content', courses:'Courses & topics' };
+        function switchView(v){
+            document.querySelectorAll('.a-nav button').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+            document.querySelectorAll('.view').forEach(s=>s.classList.remove('active'));
+            $('#view-'+v).classList.add('active');
+            $('#topTitle').textContent = TITLES[v];
+            $('#side').classList.remove('open');
+            if(v==='manage') setManage(currentManage, null);
+            if(v==='courses') renderCourseList();
+        }
+
+        // ── Upload ──
+        let uploadMode = 'file', pickedFile = null;
+        function onCourseChange(){
+            const c = courses.find(x=>x.code === $('#uCourse').value);
+            $('#uTopicList').innerHTML = (c && c.topics ? c.topics : []).map(t=>`<option value="${esc(t.name)}">`).join('');
+        }
+        function setMode(m){
+            uploadMode = m;
+            $('#mode-file').classList.toggle('active', m==='file');
+            $('#mode-link').classList.toggle('active', m==='link');
+            $('#fileMode').classList.toggle('hidden', m!=='file');
+            $('#linkMode').classList.toggle('hidden', m!=='link');
+        }
+        function onFilePicked(file){
+            if(!file) return;
+            pickedFile = file;
+            const kb = file.size/1024, size = kb>1024 ? (kb/1024).toFixed(1)+' MB' : Math.round(kb)+' KB';
+            $('#dropzone').innerHTML = `<div class="dz-picked"><div class="fic"><i class="fas fa-file-lines"></i></div>
+                <div class="meta"><b>${esc(file.name)}</b><span>${size}</span></div>
+                <button class="btn btn-ghost" onclick="event.stopPropagation();clearFile()"><i class="fas fa-xmark"></i></button></div>`;
+        }
+        function clearFile(){
+            pickedFile = null;
+            $('#fileInput').value = '';
+            $('#dropzone').innerHTML = `<div class="dz-ic"><i class="fas fa-cloud-arrow-up"></i></div>
+                <b>Drag a file here, or click to browse</b><div class="sub">PDF, PPT, DOC or image · up to 25 MB</div>`;
+        }
+        // drag & drop
+        (function(){
+            const dz = () => $('#dropzone');
+            ['dragenter','dragover'].forEach(ev => document.addEventListener(ev, e=>{
+                if(uploadMode!=='file') return; e.preventDefault();
+                if(dz() && dz().contains(e.target)) dz().classList.add('drag');
+            }));
+            ['dragleave','drop'].forEach(ev => document.addEventListener(ev, e=>{
+                if(dz()) dz().classList.remove('drag');
+            }));
+            document.addEventListener('drop', e=>{
+                if(uploadMode!=='file') return;
+                if(dz() && dz().contains(e.target)){ e.preventDefault(); if(e.dataTransfer.files.length) onFilePicked(e.dataTransfer.files[0]); }
+            });
+        })();
+
+        function doUpload(){
+            const subject_code = $('#uCourse').value;
+            const topic_name = $('#uTopic').value.trim();
+            $('#uResult').innerHTML = '';
+            if(!subject_code){ toast('Pick a course first','err'); return; }
+            if(!topic_name){ toast('Enter a topic name','err'); $('#uTopic').focus(); return; }
+
+            const btn = $('#uBtn');
+            if(uploadMode==='link'){
+                const url = $('#uLink').value.trim();
+                if(!url){ toast('Paste a link first','err'); return; }
+                btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
+                fetchJSON('/api/link', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({subject_code, topic_name, url}) })
+                    .then(d=>{ showResult(topic_name, d.url); toast('Link attached'); $('#uLink').value=''; refreshCoursesQuiet(); })
+                    .catch(e=>toast(e.message,'err'))
+                    .finally(()=>{ btn.disabled=false; btn.innerHTML='<i class="fas fa-cloud-arrow-up"></i> Upload & attach'; });
+                return;
+            }
+            // file mode → XHR for progress
+            if(!pickedFile){ toast('Choose a file first','err'); return; }
+            const fd = new FormData();
+            fd.append('subject_code', subject_code); fd.append('topic_name', topic_name); fd.append('file', pickedFile);
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Uploading…';
+            $('#progWrap').classList.remove('hidden'); $('#progBar').style.width='0%';
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST','/api/upload'); xhr.withCredentials = true;
+            xhr.upload.onprogress = e=>{ if(e.lengthComputable) $('#progBar').style.width = Math.round(e.loaded/e.total*100)+'%'; };
+            xhr.onload = ()=>{
+                btn.disabled=false; btn.innerHTML='<i class="fas fa-cloud-arrow-up"></i> Upload & attach';
+                let d={}; try{ d=JSON.parse(xhr.responseText); }catch(_){}
+                setTimeout(()=>$('#progWrap').classList.add('hidden'), 600);
+                if(xhr.status>=200 && xhr.status<300 && d.success){ showResult(topic_name, d.url); toast('File uploaded'); clearFile(); refreshCoursesQuiet(); }
+                else toast(d.error || 'Upload failed','err');
+            };
+            xhr.onerror = ()=>{ btn.disabled=false; btn.innerHTML='<i class="fas fa-cloud-arrow-up"></i> Upload & attach'; toast('Network error','err'); };
+            xhr.send(fd);
+        }
+        function showResult(topic, url){
+            $('#uResult').innerHTML = `<div class="result"><i class="fas fa-circle-check ok"></i>
+                <div style="flex:1"><b style="font-size:.85rem">Attached to “${esc(topic)}”</b><br>
+                <a href="${esc(url)}" target="_blank">Open file <i class="fas fa-arrow-up-right-from-square" style="font-size:.7rem"></i></a></div></div>`;
+        }
+        async function refreshCoursesQuiet(){ try{ courses = await fetchJSON('/api/modules'); onCourseChange(); }catch(_){} }
+
+        // ── Post update ──
+        let postType = 'assignments';
+        const codeList = () => `<datalist id="codeList">${courses.map(c=>`<option value="${esc(c.code)}">`).join('')}</datalist>`;
+        function setPostType(t, btn){ postType=t; document.querySelectorAll('#postSeg button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); renderPostFields(t); }
+        function renderPostFields(t){
+            const box = $('#postFields');
+            if(t==='assignments') box.innerHTML = codeList()+`
+                <div class="field"><label>Subject</label><input id="f_subject_code" list="codeList" placeholder="Course code"></div>
+                <div class="field"><label>Title</label><input id="f_title" placeholder="e.g. Graph theory worksheet"></div>
+                <div class="row2"><div class="field"><label>Due date</label><input type="date" id="f_date"></div>
+                    <div class="field"><label>Status</label><select id="f_status"><option value="pending">Pending</option><option value="submitted">Submitted</option><option value="overdue">Overdue</option></select></div></div>
+                <div class="field"><label>Note <span class="hint">optional</span></label><textarea id="f_message" placeholder="Any extra detail…"></textarea></div>`;
+            else if(t==='projects') box.innerHTML = codeList()+`
+                <div class="field"><label>Course</label><input id="f_course" list="codeList" placeholder="Course code"></div>
+                <div class="field"><label>Title</label><input id="f_title" placeholder="Project title"></div>
+                <div class="field"><label>Description</label><textarea id="f_description" placeholder="What's the project about?"></textarea></div>
+                <div class="field"><label>Due date</label><input type="date" id="f_due_date"></div>`;
+            else if(t==='exams') box.innerHTML = codeList()+`
+                <div class="field"><label>Course</label><input id="f_course" list="codeList" placeholder="Course code"></div>
+                <div class="field"><label>Type</label><select id="f_type"><option>Mid-term</option><option>Final Exam</option><option>Practical</option><option>Quiz</option><option>IA</option></select></div>
+                <div class="row2"><div class="field"><label>Date</label><input type="date" id="f_date"></div>
+                    <div class="field"><label>Time</label><input id="f_time" placeholder="e.g. 10:00 AM"></div></div>
+                <div class="field"><label>Location</label><input id="f_location" placeholder="e.g. Room 301"></div>`;
+            else box.innerHTML = `
+                <div class="field"><label>Title</label><input id="f_title" placeholder="Announcement title"></div>
+                <div class="field"><label>Content</label><textarea id="f_content" placeholder="Write the announcement…"></textarea></div>
+                <div class="field"><label>Priority</label><select id="f_type"><option value="info">Info</option><option value="urgent">Urgent</option></select></div>`;
+        }
+        function submitPost(){
+            const btn = $('#postBtn'); const val = id => { const el=$('#'+id); return el?el.value.trim():''; };
+            let endpoint, fd = new FormData();
+            if(postType==='announcement'){
+                if(!val('f_title')){ toast('Title is required','err'); return; }
+                endpoint='/api/announcements';
+                fd.append('title', val('f_title')); fd.append('content', val('f_content')); fd.append('type', val('f_type')||'info');
+            } else {
+                endpoint='/api/add'; fd.append('category', postType);
+                const fields = { assignments:['subject_code','title','date','status','message'], projects:['course','title','description','due_date'], exams:['course','type','date','time','location'] }[postType];
+                if(!val('f_title') && !val('f_course')){ toast('Fill in the main details first','err'); return; }
+                fields.forEach(f=>fd.append(f, val('f_'+f)));
+            }
+            btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Publishing…';
+            fetchJSON(endpoint, { method:'POST', body: fd })
+                .then(()=>{ toast('Published'); renderPostFields(postType); })
+                .catch(e=>toast(e.message,'err'))
+                .finally(()=>{ btn.disabled=false; btn.innerHTML='<i class="fas fa-plus"></i> Publish'; });
+        }
+
+        // ── Manage ──
+        let currentManage = 'assignments';
+        async function setManage(cat, btn){
+            currentManage = cat;
+            if(btn){ document.querySelectorAll('#manageSeg button').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); }
+            const box = $('#manageList');
+            box.innerHTML = '<div class="a-empty"><i class="fas fa-spinner fa-spin"></i>Loading…</div>';
+            let items = [];
+            try { items = await fetchJSON('/api/'+cat); } catch(e){ box.innerHTML = `<div class="a-empty"><i class="fas fa-triangle-exclamation"></i>${esc(e.message)}</div>`; return; }
+            if(!items.length){ box.innerHTML = `<div class="a-empty"><i class="fas fa-inbox"></i>Nothing here yet.</div>`; return; }
+            box.className = 'a-list';
+            box.innerHTML = items.map(it=>{
+                let title='', sub='';
+                if(cat==='exams'){ title=`${esc(it.course||'')} · ${esc(it.type||'')}`; sub=`${esc(it.date||'')} ${it.time?'· '+esc(it.time):''}`; }
+                else if(cat==='announcements'){ title=esc(it.title||''); sub=`<span class="chip ${it.type==='urgent'?'urgent':''}">${esc(it.type||'info')}</span> ${esc(it.date||'')}`; }
+                else { title=esc(it.title||''); sub=`${esc(it.subject_code||it.course||'')} · ${esc(it.date||it.due_date||'')}`; }
+                return `<div class="a-item"><div class="txt"><b>${title}</b><span>${sub}</span></div>
+                    <button class="btn btn-danger" onclick="delEntry('${cat}','${esc(it.id)}',this)"><i class="fas fa-trash"></i> Delete</button></div>`;
+            }).join('');
+        }
+        async function delEntry(cat, id, btn){
+            if(!await confirmDialog('This permanently removes the item.')) return;
+            btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+            try { await fetchJSON('/api/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({category:cat, id}) });
+                btn.closest('.a-item').remove(); toast('Deleted');
+            } catch(e){ toast(e.message,'err'); btn.disabled=false; btn.innerHTML='<i class="fas fa-trash"></i> Delete'; }
+        }
+
+        // ── Courses & topics ──
+        function submitCourse(){
+            const code=$('#cCode').value.trim(), title=$('#cTitle').value.trim();
+            if(!code || !title){ toast('Code and title are required','err'); return; }
+            const topics=$('#cTopics').value.split('\n').map(t=>t.trim()).filter(Boolean);
+            const btn=$('#cBtn'); btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i> Adding…';
+            fetchJSON('/api/modules', { method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ code, title, semester: parseInt($('#cSem').value), icon: $('#cIcon').value.trim()||'fas fa-book', topics, credits: parseInt($('#cCredits').value)||0, internal_marks: $('#cInternalMarks').value.trim() }) })
+                .then(async ()=>{ toast('Course added'); $('#cCode').value=''; $('#cTitle').value=''; $('#cTopics').value=''; $('#cCredits').value='0'; $('#cInternalMarks').value=''; courses=await fetchJSON('/api/modules'); loadCourses(); renderCourseList(); })
+                .catch(e=>toast(e.message,'err'))
+                .finally(()=>{ btn.disabled=false; btn.innerHTML='<i class="fas fa-plus"></i> Add course'; });
+        }
+        function renderCourseList(){
+            const box=$('#courseList');
+            if(!courses.length){ box.innerHTML=`<div class="a-empty"><i class="fas fa-inbox"></i>No courses yet.</div>`; return; }
+            const bySem={}; courses.forEach(c=>{ (bySem[c.semester||1]=bySem[c.semester||1]||[]).push(c); });
+            box.innerHTML = Object.keys(bySem).sort((a,b)=>a-b).map(sem=>`<div class="a-group-label">Semester ${sem}</div>`+
+                bySem[sem].map(c=>{
+                    const done=(c.topics||[]).filter(t=>t.url).length, tot=(c.topics||[]).length;
+                    return `<div class="a-item" style="flex-wrap:wrap">
+                        <div class="txt" style="cursor:pointer" onclick="toggleTopics(${c.id})"><b>${esc(c.code)} — ${esc(c.title)}</b><span>${done}/${tot} topics have material · <i class="fas fa-chevron-down" style="font-size:.6rem"></i> manage</span></div>
+                        <button class="btn btn-danger" onclick="delCourse(${c.id}, '${esc(c.code)}', this)"><i class="fas fa-trash"></i></button>
+                        <div id="topics-${c.id}" class="hidden" style="flex-basis:100%;margin-top:var(--sp-3)"></div>
+                    </div>`;
+                }).join('')).join('');
+        }
+        function toggleTopics(cid){
+            const el=$('#topics-'+cid); const c=courses.find(x=>x.id===cid);
+            if(!el.classList.contains('hidden')){ el.classList.add('hidden'); return; }
+            el.classList.remove('hidden');
+            el.innerHTML = (c.topics||[]).map(t=>`<div class="topic-row"><span class="tstate ${t.url?'has':'no'}"></span>
+                <span class="tname">${esc(t.name)}</span>${t.url?`<a href="${esc(t.url)}" target="_blank">view</a>`:'<span style="font-size:.72rem;color:var(--text-3)">no file</span>'}
+                <button class="btn btn-danger" onclick="delTopic(${t.id}, ${cid}, this)"><i class="fas fa-xmark"></i></button></div>`).join('')
+                + `<div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-3)">
+                    <input id="newtopic-${cid}" placeholder="Add a topic…" style="flex:1;padding:var(--sp-2) var(--sp-3);background:var(--bg-0);border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:.82rem">
+                    <button class="btn btn-ghost" onclick="addTopicTo(${cid})"><i class="fas fa-plus"></i></button></div>`;
+        }
+        async function addTopicTo(cid){
+            const c=courses.find(x=>x.id===cid); const name=$('#newtopic-'+cid).value.trim();
+            if(!name){ toast('Type a topic name','err'); return; }
+            try { await fetchJSON('/api/topics', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({subject_code:c.code, topic_name:name}) });
+                toast('Topic added'); courses=await fetchJSON('/api/modules'); renderCourseList(); toggleTopics(cid);
+            } catch(e){ toast(e.message,'err'); }
+        }
+        async function delTopic(tid, cid, btn){
+            if(!await confirmDialog('Remove this topic and its link?')) return;
+            try { await fetchJSON('/api/topics/'+tid, { method:'DELETE' }); toast('Topic removed');
+                courses=await fetchJSON('/api/modules'); onCourseChange(); renderCourseList(); toggleTopics(cid);
+            } catch(e){ toast(e.message,'err'); }
+        }
+        async function delCourse(id, code, btn){
+            if(!await confirmDialog(`Delete “${code}” and all its topics?`, 'Delete course')) return;
+            try { await fetchJSON('/api/modules/'+id, { method:'DELETE' }); toast('Course deleted');
+                courses=await fetchJSON('/api/modules'); loadCourses(); renderCourseList();
+            } catch(e){ toast(e.message,'err'); }
+        }
+
+        // ── Session ──
+        function logout(){ fetch('/api/auth/logout', {method:'POST', credentials:'same-origin'}).finally(()=>location.href='/login.html'); }
+    </script>
+</body>
+</html>

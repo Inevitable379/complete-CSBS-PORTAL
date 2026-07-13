@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSBS Portal</title>
+    <meta name="description" content="CSBS Student Portal — Course modules, assignments, schedule, and attendance">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/components.css">
+    <script>
+        // Prevent flash of wrong theme
+        if (localStorage.getItem('theme') === 'dark') document.documentElement.dataset.theme = 'dark';
+        // Auth check — verify server session
+        fetch('/api/auth/check', { credentials: 'same-origin' })
+            .then(r => { if (!r.ok) window.location.href = '/login.html'; })
+            .catch(() => window.location.href = '/login.html');
+    </script>
+</head>
+<body>
+    <!-- Accent gradient strip -->
+    <div style="position:fixed;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--violet),var(--accent));z-index:9999;opacity:0.8"></div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container" aria-live="polite"></div>
+
+    <!-- App Shell -->
+    <div id="app-shell">
+        <!-- Icon Rail -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="sidebar-logo"><i class="fas fa-graduation-cap"></i></div>
+                <span class="sidebar-title">CSBS Portal</span>
+            </div>
+            <div class="sidebar-nav">
+                <button class="sidebar-item active" data-section="dashboard" onclick="navigate('dashboard')">
+                    <i class="fas fa-house"></i><span>Dashboard</span>
+                </button>
+                <button class="sidebar-item" data-section="modules" onclick="navigate('modules')">
+                    <i class="fas fa-cubes"></i><span>Courses</span>
+                </button>
+                <button class="sidebar-item" data-section="assignments" onclick="navigate('assignments')">
+                    <i class="fas fa-clipboard-list"></i><span>Assignments</span>
+                </button>
+                <button class="sidebar-item" data-section="projects" onclick="navigate('projects')">
+                    <i class="fas fa-diagram-project"></i><span>Projects</span>
+                </button>
+                <button class="sidebar-item" data-section="announcements" onclick="navigate('announcements')">
+                    <i class="fas fa-bullhorn"></i><span>Announcements</span>
+                </button>
+                <button class="sidebar-item" data-section="schedule" onclick="navigate('schedule')">
+                    <i class="fas fa-calendar"></i><span>Schedule</span>
+                </button>
+                <button class="sidebar-item" data-section="attendance" onclick="navigate('attendance')">
+                    <i class="fas fa-chart-bar"></i><span>Attendance</span>
+                </button>
+            </div>
+            <div class="sidebar-bottom">
+                <button class="sidebar-item hidden" id="admin-link" onclick="window.location.href='/admin'">
+                    <i class="fas fa-shield-halved"></i><span>Admin</span>
+                </button>
+                <button class="sidebar-item" onclick="toggleTheme()" id="theme-toggle">
+                    <i class="fas fa-sun"></i><span>Theme</span>
+                </button>
+                <button class="sidebar-item" onclick="showShortcuts()">
+                    <i class="fas fa-keyboard"></i><span>Shortcuts</span>
+                </button>
+                <div class="sidebar-user">
+                    <div class="sidebar-avatar" id="user-avatar"></div>
+                    <span class="sidebar-user-name" id="user-display-name">Student</span>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Area -->
+        <div class="main-area">
+            <!-- Header -->
+            <header class="main-header">
+                <div class="main-header-left">
+                    <button class="btn-icon sidebar-toggle" onclick="toggleMobileNav()" aria-label="Toggle navigation">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <h1 id="page-title"><i class="fas fa-house"></i> Dashboard</h1>
+                </div>
+                <div class="main-header-actions">
+                    <button class="btn-ghost" onclick="openCommandPalette()" title="Ctrl+K">
+                        <i class="fas fa-search"></i>
+                        <span class="hide-mobile">Search</span>
+                        <kbd class="hide-mobile" style="font-size:0.65rem;padding:2px 6px;background:var(--bg-2);border-radius:4px;color:var(--text-2);margin-left:4px;">Ctrl+K</kbd>
+                    </button>
+                    <button class="btn-icon" onclick="logout()" title="Logout">
+                        <i class="fas fa-right-from-bracket"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Scrollable Content -->
+            <div class="main-scroll">
+                <div class="main-content">
+
+                    <!-- ===== DASHBOARD ===== -->
+                    <section id="section-dashboard" class="page-section active">
+                        <div class="greeting fade-up">
+                            <h2 id="greeting-text">Good evening</h2>
+                            <p id="greeting-sub">Here's what's happening today</p>
+                        </div>
+
+                        <div class="priority-strip stagger" id="priority-strip"></div>
+
+                        <div class="grid-4 stagger mb-6" id="stat-cards">
+                            <div class="stat-card" style="border-top:2px solid var(--success)">
+                                <span class="stat-label">Attendance</span>
+                                <span class="stat-value" id="stat-attendance">—</span>
+                                <span class="stat-sub" id="stat-attendance-sub"><i class="fas fa-arrow-trend-up" style="color:var(--success)"></i> Overall average</span>
+                            </div>
+                            <div class="stat-card" style="border-top:2px solid var(--warning)">
+                                <span class="stat-label">Assignments</span>
+                                <span class="stat-value" id="stat-assignments">—</span>
+                                <span class="stat-sub" id="stat-assignments-sub">Loading...</span>
+                            </div>
+                            <div class="stat-card" style="border-top:2px solid var(--accent)">
+                                <span class="stat-label">Courses</span>
+                                <span class="stat-value" id="stat-modules">—</span>
+                                <span class="stat-sub">This semester</span>
+                            </div>
+                            <div class="stat-card" style="border-top:2px solid var(--danger)">
+                                <span class="stat-label">Next Exam</span>
+                                <span class="stat-value" id="stat-exam">—</span>
+                                <span class="stat-sub" id="stat-exam-sub">No exams scheduled</span>
+                            </div>
+                        </div>
+
+                        <div class="section-header mt-6">
+                            <h2 class="section-title">Today's Schedule</h2>
+                        </div>
+                        <div class="timeline stagger" id="today-timeline"></div>
+
+                        <div class="section-header mt-6">
+                            <h2 class="section-title">Latest Announcements</h2>
+                            <button class="btn-ghost" onclick="navigate('announcements')">View all <i class="fas fa-arrow-right"></i></button>
+                        </div>
+                        <div id="dashboard-announcements" class="flex-col gap-3 stagger"></div>
+                    </section>
+
+                    <!-- ===== MODULES ===== -->
+                    <section id="section-modules" class="page-section">
+                        <div class="section-header">
+                            <h2 class="section-title">Courses</h2>
+                            <div class="sem-dropdown" id="sem-dropdown">
+                                <button class="sem-trigger" onclick="toggleSemDropdown()">
+                                    <span id="sem-label">Sem 1</span>
+                                    <i class="fas fa-chevron-down sem-arrow"></i>
+                                </button>
+                                <div class="sem-menu" id="sem-menu">
+                                    <!-- Populated dynamically — only semesters that actually have courses -->
+                                </div>
+                            </div>
+                        </div>
+                        <div class="grid-auto stagger" id="modules-grid"></div>
+                    </section>
+
+                    <!-- ===== ASSIGNMENTS ===== -->
+                    <section id="section-assignments" class="page-section">
+                        <div class="section-header">
+                            <h2 class="section-title">Assignments</h2>
+                        </div>
+                        <div class="filter-bar" id="assignment-filters">
+                            <button class="filter-pill active" onclick="filterAssignments('all', this)">All</button>
+                            <button class="filter-pill" onclick="filterAssignments('pending', this)">Pending</button>
+                            <button class="filter-pill" onclick="filterAssignments('submitted', this)">Submitted</button>
+                            <button class="filter-pill" onclick="filterAssignments('overdue', this)">Overdue</button>
+                        </div>
+                        <div class="grid-2 stagger" id="assignments-grid"></div>
+                        <div class="empty-state hidden" id="assignments-empty">
+                            <i class="fas fa-clipboard-check"></i>
+                            <h3>No assignments yet</h3>
+                            <p>When assignments are posted, they'll appear here.</p>
+                        </div>
+                    </section>
+
+                    <!-- ===== PROJECTS ===== -->
+                    <section id="section-projects" class="page-section">
+                        <div class="section-header">
+                            <h2 class="section-title">Projects</h2>
+                        </div>
+                        <div class="grid-2 stagger" id="projects-grid"></div>
+                        <div class="empty-state hidden" id="projects-empty">
+                            <i class="fas fa-diagram-project"></i>
+                            <h3>No projects yet</h3>
+                            <p>When projects are assigned, they'll appear here.</p>
+                        </div>
+                    </section>
+
+                    <!-- ===== ANNOUNCEMENTS ===== -->
+                    <section id="section-announcements" class="page-section">
+                        <div class="section-header">
+                            <h2 class="section-title">Announcements</h2>
+                        </div>
+                        <div class="filter-bar">
+                            <button class="filter-pill active" onclick="filterAnnouncements('all', this)">All</button>
+                            <button class="filter-pill" onclick="filterAnnouncements('urgent', this)">Urgent</button>
+                            <button class="filter-pill" onclick="filterAnnouncements('info', this)">General</button>
+                        </div>
+                        <div class="flex-col gap-3 stagger" id="announcements-container"></div>
+                        <div class="empty-state hidden" id="announcements-empty">
+                            <i class="fas fa-bell-slash"></i>
+                            <h3>All caught up!</h3>
+                            <p>No announcements right now. Check back later.</p>
+                        </div>
+                    </section>
+
+                    <!-- ===== SCHEDULE ===== -->
+                    <section id="section-schedule" class="page-section">
+                        <div class="section-header">
+                            <h2 class="section-title">Schedule</h2>
+                        </div>
+
+                        <!-- View Tabs -->
+                        <div class="filter-bar" id="schedule-tabs" style="margin-bottom: var(--sp-6)">
+                            <button class="filter-pill active" id="tab-calendar" onclick="switchScheduleTab('calendar', this)">
+                                <i class="fas fa-calendar-days"></i> Calendar
+                            </button>
+                            <button class="filter-pill" id="tab-exams" onclick="switchScheduleTab('exams', this)">
+                                <i class="fas fa-file-pen"></i> Exams
+                            </button>
+                            <button class="filter-pill" id="tab-timetable" onclick="switchScheduleTab('timetable', this)">
+                                <i class="fas fa-table-cells"></i> Timetable
+                            </button>
+                        </div>
+
+                        <!-- ── Calendar View ── -->
+                        <div id="schedule-view-calendar">
+                            <div class="cal-container">
+                                <div class="cal-nav">
+                                    <button class="btn-icon" onclick="calPrev()"><i class="fas fa-chevron-left"></i></button>
+                                    <div class="cal-month-label" id="cal-month-label">May 2026</div>
+                                    <button class="btn-icon" onclick="calNext()"><i class="fas fa-chevron-right"></i></button>
+                                    <button class="btn-ghost" onclick="calToday()" style="margin-left:auto;font-size:0.8rem">Today</button>
+                                </div>
+                                <div class="cal-weekdays">
+                                    <div>Sun</div><div>Mon</div><div>Tue</div><div>Wed</div><div>Thu</div><div>Fri</div><div>Sat</div>
+                                </div>
+                                <div class="cal-grid" id="cal-grid"></div>
+                            </div>
+                            <!-- Event detail panel -->
+                            <div class="cal-legend">
+                                <span class="cal-legend-dot" style="background:var(--danger)"></span><span>Exam</span>
+                                <span class="cal-legend-dot" style="background:var(--warning)"></span><span>Assignment</span>
+                                <span class="cal-legend-dot" style="background:var(--accent)"></span><span>Today</span>
+                            </div>
+                            <div class="cal-events-panel" id="cal-events-panel">
+                                <p class="text-caption" style="padding:var(--sp-4)">Click a highlighted date to see events.</p>
+                            </div>
+                        </div>
+
+                        <!-- ── Exams Table View ── -->
+                        <div id="schedule-view-exams" style="display:none">
+                            <div class="table-wrap">
+                                <table class="table" id="exam-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Course</th>
+                                            <th>Type</th>
+                                            <th>Date</th>
+                                            <th>Time</th>
+                                            <th>Location</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="exam-tbody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- ── Timetable View ── -->
+                        <div id="schedule-view-timetable" style="display:none">
+                            <div class="table-wrap">
+                                <table class="table" id="timetable"></table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ===== ATTENDANCE ===== -->
+                    <section id="section-attendance" class="page-section">
+                        <div class="card card-danger mb-4 hidden" id="attendance-warning">
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-triangle-exclamation" style="color:var(--danger);font-size:1.2rem"></i>
+                                <div>
+                                    <strong>Low Attendance Warning</strong>
+                                    <p class="text-caption" id="attendance-warning-text">Some subjects are below 75% attendance.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="section-header">
+                            <h2 class="section-title">Attendance</h2>
+                        </div>
+
+                        <div class="flex gap-4 mb-6" style="flex-wrap:wrap">
+                            <div class="search-wrap" style="flex:1;min-width:200px">
+                                <i class="fas fa-search"></i>
+                                <input type="text" class="search-input" placeholder="Search by name or USN..." id="attendance-search" oninput="searchAttendance()">
+                            </div>
+                            <div class="filter-bar" style="margin-bottom:0">
+                                <button class="filter-pill active" onclick="sortAttendance('default', this)"><i class="fas fa-list"></i> Default</button>
+                                <button class="filter-pill" onclick="sortAttendance('low', this)"><i class="fas fa-arrow-down"></i> Low First</button>
+                                <button class="filter-pill" onclick="sortAttendance('high', this)"><i class="fas fa-arrow-up"></i> High First</button>
+                                <button class="filter-pill" onclick="sortAttendance('name', this)"><i class="fas fa-font"></i> Name</button>
+                            </div>
+                        </div>
+
+                        <div class="table-wrap">
+                            <table class="table" id="attendance-table">
+                                <thead>
+                                    <tr>
+                                        <th>S.No</th>
+                                        <th>USN</th>
+                                        <th>Name</th>
+                                        <th>Classes Attended</th>
+                                        <th>Total Classes</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendance-tbody"></tbody>
+                            </table>
+                        </div>
+                    </section>
+
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    <!-- Command Palette Modal -->
+    <div class="modal-backdrop" id="cmd-palette" onclick="if(event.target===this)closeCommandPalette()">
+        <div class="modal-content" style="max-width:560px" onclick="event.stopPropagation()">
+            <input class="cmd-input" id="cmd-input" placeholder="Search pages, courses, actions..." oninput="handleCmdSearch(this.value)">
+            <div class="cmd-results" id="cmd-results">
+                <div class="cmd-section">Pages</div>
+                <div class="cmd-item" onclick="navigate('dashboard');closeCommandPalette()"><i class="fas fa-house"></i> Dashboard</div>
+                <div class="cmd-item" onclick="navigate('modules');closeCommandPalette()"><i class="fas fa-cubes"></i> Modules</div>
+                <div class="cmd-item" onclick="navigate('assignments');closeCommandPalette()"><i class="fas fa-clipboard-list"></i> Assignments</div>
+                <div class="cmd-item" onclick="navigate('projects');closeCommandPalette()"><i class="fas fa-diagram-project"></i> Projects</div>
+                <div class="cmd-item" onclick="navigate('announcements');closeCommandPalette()"><i class="fas fa-bullhorn"></i> Announcements</div>
+                <div class="cmd-item" onclick="navigate('schedule');closeCommandPalette()"><i class="fas fa-calendar"></i> Schedule</div>
+                <div class="cmd-item" onclick="navigate('attendance');closeCommandPalette()"><i class="fas fa-chart-bar"></i> Attendance</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Syllabus Modal -->
+    <div class="modal-backdrop" id="syllabus-modal" onclick="if(event.target===this)closeSyllabusModal()">
+        <div class="modal-content" style="max-width:600px">
+            <div class="modal-header">
+                <h2 id="syllabus-title">Syllabus</h2>
+                <button class="btn-icon" onclick="closeSyllabusModal()"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="modal-body" id="syllabus-body"></div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+
+    <style>
+        .page-section { display: none; opacity: 0; }
+        .page-section.active { display: block; animation: fadeUp var(--dur-fast) var(--ease-out) forwards; }
+        .hide-mobile { display: inline; }
+        @media (max-width: 768px) { .hide-mobile { display: none; } .sidebar-toggle { display: flex !important; } }
+        .sidebar-toggle { display: none; }
+        kbd { pointer-events: none; }
+
+        /* Module card overrides */
+        .module-card { cursor: default; }
+        .module-card .module-header { padding: var(--sp-4); border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: var(--sp-3); flex-wrap: wrap; }
+        .module-card .module-header > i { font-size: 1.2rem; margin-top: 2px; }
+        .module-card .module-header h3 { font-size: 0.95rem; font-weight: 600; flex: 1; min-width: 0; }
+        .module-card .module-meta { display: flex; align-items: center; gap: var(--sp-2); margin-left: auto; flex-shrink: 0; }
+        .module-card .module-meta .code { font-size: 0.7rem; color: var(--text-2); font-family: 'JetBrains Mono', monospace; }
+        .course-internals { padding: var(--sp-3) var(--sp-4); background: var(--bg-1); border-bottom: 1px solid var(--border); font-size: 0.78rem; color: var(--text-2); display: flex; align-items: center; gap: var(--sp-2); }
+        .course-internals i { color: var(--accent); font-size: 0.8rem; }
+        .module-card .module-body { padding: var(--sp-4); }
+        .module-card .topic-item { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) 0; font-size: 0.82rem; border-bottom: 1px solid var(--border); }
+        .module-card .topic-item:last-child { border-bottom: none; }
+        .module-card .topic-item a { color: var(--accent); transition: color var(--dur-instant); display: flex; align-items: center; gap: var(--sp-2); flex: 1; }
+        .module-card .topic-item a:hover { color: var(--accent-hover); }
+        .module-card .topic-item .no-file { color: var(--text-3); flex: 1; }
+
+        /* Assignment card */
+        .assignment-card .subject { margin-bottom: var(--sp-2); }
+        .assignment-card h3 { font-size: 1rem; margin-bottom: var(--sp-2); }
+        .assignment-card .meta { display: flex; justify-content: space-between; align-items: center; margin-top: var(--sp-3); }
+
+        /* Announcement card */
+        .announcement-card { cursor: pointer; }
+        .announcement-card .ann-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-2); }
+        .announcement-card .ann-title { font-size: 0.95rem; font-weight: 600; }
+        .announcement-card .ann-body { font-size: 0.85rem; color: var(--text-2); line-height: 1.5; }
+
+        /* Exam type badges */
+        .exam-type { text-transform: capitalize; }
+    </style>
+</body>
+</html>

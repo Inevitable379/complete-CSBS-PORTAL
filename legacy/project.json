@@ -1,0 +1,20 @@
+[
+    {
+        "course": "DMCS",
+        "title": "Graph Theory Implementation",
+        "description": "Implement graph algorithms in Python",
+        "due_date": "2025-02-15",
+        "repo_link": "https://github.com/student/graph-theory-project",
+        "demo_link": "https://example.com/demo",
+        "id": "1764394850"
+    },
+    {
+        "course": "IPS",
+        "title": "Algorithm Analysis Project",
+        "description": "Analyze time complexity of sorting algorithms",
+        "due_date": "2025-02-20",
+        "repo_link": "https://github.com/student/algorithm-analysis",
+        "demo_link": "https://example.com/demo2",
+        "id": "1764394851"
+    }
+]

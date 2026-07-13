@@ -1,0 +1,37 @@
+[
+    {
+        "course": "DMCS",
+        "type": "Mid-term",
+        "date": "2025-01-15",
+        "time": "10:00 AM",
+        "location": "Room 301",
+        "id": "1764394852"
+    },
+    {
+        "course": "IPS",
+        "type": "Final Exam",
+        "date": "2025-05-20",
+        "time": "2:00 PM",
+        "location": "Auditorium",
+        "id": "1764394853"
+    },
+    {
+        "course": "PHYSICS",
+        "type": "Practical",
+        "date": "2025-03-10",
+        "time": "9:00 AM",
+        "location": "Physics Lab",
+        "id": "1764394854"
+    },
+    {
+        "subject_code": "PEE",
+        "title": "IA 2",
+        "date": "15 feb",
+        "status": "pemding",
+        "topic_name": "Basic Electrical Concepts & Circuits",
+        "file": "",
+        "content": "",
+        "type": "info",
+        "id": "1765341772"
+    }
+]
