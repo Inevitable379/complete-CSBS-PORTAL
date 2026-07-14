@@ -94,8 +94,8 @@ def create_app():
         email = payload.get('email', '').lower().strip()
         name = payload.get('name', '')
 
-        # Check whitelist
-        whitelist = get_whitelisted_emails()
+        # Check whitelist (admin emails are always allowed)
+        whitelist = set(get_whitelisted_emails()) | set(Config.ADMIN_EMAILS)
         if email not in whitelist:
             return jsonify({"error": f"Access denied: {email} is not authorized"}), 403
 
