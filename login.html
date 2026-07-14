@@ -229,15 +229,24 @@
     </div>
 
     <script>
-        const CLIENT_ID = "212930513958-1mh49c4j0l3sqjbsbq5b6q1o4oav139e.apps.googleusercontent.com";
+        let CLIENT_ID = null;
+        // The Google client ID comes from the server (.env) - one place to change it.
+        async function getClientId() {
+            if (CLIENT_ID) return CLIENT_ID;
+            try { CLIENT_ID = (await (await fetch('/api/config', { credentials: 'same-origin' })).json()).google_client_id; } catch (e) {}
+            return CLIENT_ID;
+        }
+        getClientId();
 
         // Redirect to Google with prompt=select_account so the user ALWAYS
         // chooses which account to use (fixes silent sign-in with the wrong email).
-        function signInWithGoogle() {
+        async function signInWithGoogle() {
+            const clientId = await getClientId();
+            if (!clientId) { showError('Sign-in is not configured yet - refresh and try again.'); return; }
             const nonce = crypto.getRandomValues(new Uint32Array(4)).join('');
             sessionStorage.setItem('oauth_nonce', nonce);
             const params = new URLSearchParams({
-                client_id: CLIENT_ID,
+                client_id: clientId,
                 redirect_uri: window.location.origin + '/login.html',
                 response_type: 'id_token',
                 scope: 'openid email profile',

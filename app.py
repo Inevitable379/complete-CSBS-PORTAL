@@ -129,6 +129,11 @@ def create_app():
         session.clear()
         return jsonify({"success": True})
 
+    @app.route('/api/config')
+    def api_config():
+        """Public: the Google client ID the login page needs to start sign-in."""
+        return jsonify({"google_client_id": Config.GOOGLE_CLIENT_ID})
+
     # -----------------------------------------------------------------------
     # Data API routes (require login)
     # -----------------------------------------------------------------------
