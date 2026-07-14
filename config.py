@@ -15,7 +15,7 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'csbs-portal-dev-key-change-in-prod')
     GOOGLE_CLIENT_ID = os.getenv(
         'GOOGLE_CLIENT_ID',
-        '212930513958-1mh49c4j0l3sqjbsbq5b6q1o4oav139e.apps.googleusercontent.com'
+        '872311576745-63rd61m4i2b8nuus2mh73r9klcp44ago.apps.googleusercontent.com'
     )
 
     # Emails (must also be on the whitelist) that get admin-panel access.
