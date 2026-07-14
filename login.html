@@ -187,20 +187,28 @@
         <h2>Welcome back</h2>
         <p class="subtitle">Sign in with your Jain University email to access the CSBS Portal.</p>
 
-        <div id="g_id_onload"
-            data-client_id="212930513958-1mh49c4j0l3sqjbsbq5b6q1o4oav139e.apps.googleusercontent.com"
-            data-callback="handleCredentialResponse"
-            data-auto_prompt="false"
-            data-auto_select="false"
-            data-prompt="select_account">
-        </div>
+        <button class="google-signin-btn" onclick="signInWithGoogle()">
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                <path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.62z"/>
+                <path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.81.54-1.85.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/>
+                <path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z"/>
+                <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.43 1.35l2.58-2.59C13.46.9 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
+            </svg>
+            Sign in with Google
+        </button>
+        <p class="signin-hint">Use your <strong>@jainuniversity.ac.in</strong> account — you'll be asked which account to use each time.</p>
 
-        <div class="g-wrapper">
-            <div class="g_id_signin"
-                data-type="standard" data-size="large" data-theme="outline"
-                data-text="sign_in_with" data-shape="rectangular" data-logo_alignment="left">
-            </div>
-        </div>
+        <style>
+            .google-signin-btn {
+                width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+                padding: 12px 16px; background: var(--bg-0); border: 1px solid var(--border-hover);
+                border-radius: var(--r-sm); font-family: inherit; font-size: 0.9rem; font-weight: 600;
+                color: var(--text-1); cursor: pointer; transition: all var(--dur-instant) var(--ease-out);
+            }
+            .google-signin-btn:hover { border-color: var(--accent); box-shadow: var(--shadow-md); }
+            .google-signin-btn:active { transform: scale(0.99); }
+            .signin-hint { margin-top: var(--sp-4); font-size: 0.78rem; color: var(--text-3); text-align: center; line-height: 1.5; }
+        </style>
 
         <!-- Dev bypass: only visible on localhost -->
         <div id="dev-bypass">
@@ -221,46 +229,62 @@
     </div>
 
     <script>
-        /**
-         * Google Sign-In callback — sends the raw JWT to the server.
-         * The server verifies the token against Google's public keys,
-         * checks the whitelist in the database, and sets a session cookie.
-         */
-        async function handleCredentialResponse(response) {
-            const errorMsg = document.getElementById('login-error');
-            errorMsg.style.display = 'none';
+        const CLIENT_ID = "212930513958-1mh49c4j0l3sqjbsbq5b6q1o4oav139e.apps.googleusercontent.com";
 
+        // Redirect to Google with prompt=select_account so the user ALWAYS
+        // chooses which account to use (fixes silent sign-in with the wrong email).
+        function signInWithGoogle() {
+            const nonce = crypto.getRandomValues(new Uint32Array(4)).join('');
+            sessionStorage.setItem('oauth_nonce', nonce);
+            const params = new URLSearchParams({
+                client_id: CLIENT_ID,
+                redirect_uri: window.location.origin + '/login.html',
+                response_type: 'id_token',
+                scope: 'openid email profile',
+                nonce: nonce,
+                prompt: 'select_account'
+            });
+            window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + params.toString();
+        }
+
+        function showError(msg) {
+            const e = document.getElementById('login-error');
+            e.style.display = 'flex';
+            e.querySelector('span').textContent = msg;
+        }
+
+        // Send Google's id_token to the server for verification + whitelist check.
+        async function sendToken(idToken) {
+            document.getElementById('login-error').style.display = 'none';
             try {
                 const res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin',
-                    body: JSON.stringify({ token: response.credential })
+                    body: JSON.stringify({ token: idToken })
                 });
-
                 const data = await res.json();
-
-                if (res.ok && data.success) {
-                    window.location.href = '/';
-                } else {
-                    errorMsg.style.display = 'flex';
-                    errorMsg.querySelector('span').textContent =
-                        data.error || 'Authentication failed. Please try again.';
-                }
+                if (res.ok && data.success) { window.location.href = '/'; }
+                else { showError(data.error || 'Authentication failed. Please try again.'); }
             } catch (err) {
-                errorMsg.style.display = 'flex';
-                errorMsg.querySelector('span').textContent =
-                    'Network error. Please check your connection.';
+                showError('Network error. Please check your connection.');
             }
         }
 
-        /**
-         * Dev bypass — creates a server-side session via the same endpoint.
-         * Only works on localhost when the server is in dev/fallback mode.
-         */
+        // Handle Google's redirect back — the id_token arrives in the URL fragment.
+        (function handleRedirect() {
+            if (!location.hash) return;
+            const p = new URLSearchParams(location.hash.slice(1));
+            const idToken = p.get('id_token');
+            const err = p.get('error');
+            history.replaceState(null, '', location.pathname);
+            if (idToken) sendToken(idToken);
+            else if (err) showError('Google sign-in was cancelled. Please try again.');
+        })();
+
+        // Dev bypass — localhost only
         async function devLogin() {
             if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
-
             try {
                 const res = await fetch('/api/auth/login', {
                     method: 'POST',
@@ -268,27 +292,16 @@
                     credentials: 'same-origin',
                     body: JSON.stringify({ dev_bypass: true })
                 });
-
                 const data = await res.json();
-                if (res.ok && data.success) {
-                    window.location.href = '/';
-                } else {
-                    const errorMsg = document.getElementById('login-error');
-                    errorMsg.style.display = 'flex';
-                    errorMsg.querySelector('span').textContent =
-                        data.error || 'Dev login failed.';
-                }
-            } catch (err) {
-                console.error('Dev login error:', err);
-            }
+                if (res.ok && data.success) window.location.href = '/';
+                else showError(data.error || 'Dev login failed.');
+            } catch (err) { console.error('Dev login error:', err); }
         }
-
-        // Show dev bypass button on localhost
         if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
             document.getElementById('dev-bypass').style.display = 'block';
         }
 
-        // If already authenticated, redirect to dashboard
+        // If already authenticated, go to the dashboard
         fetch('/api/auth/check', { credentials: 'same-origin' })
             .then(r => r.json())
             .then(data => { if (data.authenticated) window.location.href = '/'; })
