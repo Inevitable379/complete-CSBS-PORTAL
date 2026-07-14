@@ -13,7 +13,7 @@ from database import (
     get_all, add_item, delete_item, get_count,
     get_whitelisted_emails, add_course, delete_course,
     add_topic, delete_topic, get_all_materials, unlink_material,
-    rename_topic
+    rename_topic, add_whitelisted_email, remove_whitelisted_email
 )
 from auth import verify_google_token, login_required, admin_required
 
@@ -397,6 +397,37 @@ def create_app():
         if not new_name:
             return jsonify({"error": "Topic name cannot be empty"}), 400
         rename_topic(topic_id, new_name)
+        return jsonify({"success": True})
+
+    # -----------------------------------------------------------------------
+    # Users Management
+    # -----------------------------------------------------------------------
+
+    @app.route('/api/users', methods=['GET'])
+    @admin_required
+    def api_get_users():
+        emails = get_whitelisted_emails()
+        # Include hardcoded admins as well to show who has access
+        all_users = set(emails) | set(Config.ADMIN_EMAILS)
+        return jsonify([{"email": e, "is_admin": e in Config.ADMIN_EMAILS} for e in sorted(list(all_users))])
+
+    @app.route('/api/users', methods=['POST'])
+    @admin_required
+    def api_add_user():
+        data = request.json
+        email = data.get('email', '').strip().lower()
+        if not email:
+            return jsonify({"error": "Email is required"}), 400
+        add_whitelisted_email(email)
+        return jsonify({"success": True, "email": email})
+
+    @app.route('/api/users/<email>', methods=['DELETE'])
+    @admin_required
+    def api_delete_user(email):
+        email = email.strip().lower()
+        if email in Config.ADMIN_EMAILS:
+            return jsonify({"error": "Cannot remove hardcoded admin emails"}), 400
+        remove_whitelisted_email(email)
         return jsonify({"success": True})
 
     # -----------------------------------------------------------------------

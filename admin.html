@@ -189,6 +189,7 @@
                 <button data-view="post" onclick="switchView('post')"><i class="fas fa-pen-nib"></i> Post update</button>
                 <button data-view="manage" onclick="switchView('manage')"><i class="fas fa-list-check"></i> Manage content</button>
                 <button data-view="courses" onclick="switchView('courses')"><i class="fas fa-cubes"></i> Courses &amp; topics</button>
+                <button data-view="users" onclick="switchView('users')"><i class="fas fa-users"></i> Access control</button>
             </nav>
             <div class="a-side-foot">
                 <a href="/"><i class="fas fa-arrow-left"></i> Back to portal</a>
@@ -300,6 +301,18 @@
                     <div class="a-card"><div id="courseList"><div class="a-empty"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div></div>
                 </section>
 
+                <!-- ===== USERS ===== -->
+                <section id="view-users" class="view">
+                    <div class="lead"><h2>Access control</h2><p>Manage who can log into the portal. Hardcoded admin emails cannot be removed.</p></div>
+                    <div class="a-card">
+                        <div style="display:flex;gap:var(--sp-2)">
+                            <input id="newEmail" type="email" placeholder="student@example.com" style="flex:1;padding:var(--sp-2) var(--sp-3);background:var(--bg-0);border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:.9rem">
+                            <button class="btn btn-primary" onclick="addUser()" style="width:auto"><i class="fas fa-plus"></i> Add User</button>
+                        </div>
+                    </div>
+                    <div class="a-card"><div id="usersList"><div class="a-empty"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div></div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -360,7 +373,7 @@
         }
 
         // ── View switching ──
-        const TITLES = { upload:'Upload material', post:'Post update', manage:'Manage content', courses:'Courses & topics' };
+        const TITLES = { upload:'Upload material', post:'Post update', manage:'Manage content', courses:'Courses & topics', users:'Access control' };
         function switchView(v){
             document.querySelectorAll('.a-nav button').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
             document.querySelectorAll('.view').forEach(s=>s.classList.remove('active'));
@@ -369,6 +382,7 @@
             $('#side').classList.remove('open');
             if(v==='manage') setManage(currentManage, null);
             if(v==='courses') renderCourseList();
+            if(v==='users') loadUsers();
         }
 
         // ── Upload ──
@@ -614,6 +628,36 @@
             try { await fetchJSON('/api/modules/'+id, { method:'DELETE' }); toast('Course deleted');
                 courses=await fetchJSON('/api/modules'); loadCourses(); renderCourseList();
             } catch(e){ toast(e.message,'err'); }
+        }
+
+        // ── Users ──
+        async function loadUsers(){
+            const box = $('#usersList');
+            box.innerHTML = `<div class="a-empty"><i class="fas fa-spinner fa-spin"></i>Loading…</div>`;
+            try {
+                const list = await fetchJSON('/api/users');
+                if(!list.length){ box.innerHTML = `<div class="a-empty"><i class="fas fa-inbox"></i>No whitelisted users.</div>`; return; }
+                box.innerHTML = list.map(u=>`<div class="a-item" style="display:flex;justify-content:space-between;align-items:center;padding:var(--sp-3) 0;border-bottom:1px solid var(--border)">
+                    <div style="font-size:.9rem;font-weight:500">${esc(u.email)} ${u.is_admin ? '<span class="badge badge-accent" style="margin-left:8px;font-size:.7rem;padding:2px 6px;border-radius:4px;background:var(--accent-muted);color:var(--accent)">Admin</span>' : ''}</div>
+                    ${!u.is_admin ? `<button class="btn btn-danger" onclick="removeUser('${esc(u.email)}', this)"><i class="fas fa-trash"></i></button>` : ''}
+                </div>`).join('');
+            } catch(e){ box.innerHTML = `<div class="a-empty"><i class="fas fa-circle-xmark" style="color:var(--danger)"></i>Failed to load users</div>`; toast(e.message, 'err'); }
+        }
+        async function addUser(){
+            const email = $('#newEmail').value.trim();
+            if(!email){ toast('Enter an email', 'err'); return; }
+            try {
+                await fetchJSON('/api/users', { method: 'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email}) });
+                toast('User added'); $('#newEmail').value = ''; loadUsers();
+            } catch(e){ toast(e.message, 'err'); }
+        }
+        async function removeUser(email, btn){
+            if(!await confirmDialog(`Remove access for ${email}?`, 'Remove User')) return;
+            btn.disabled = true;
+            try {
+                await fetchJSON('/api/users/'+encodeURIComponent(email), { method: 'DELETE' });
+                toast('User removed'); loadUsers();
+            } catch(e){ toast(e.message, 'err'); btn.disabled = false; }
         }
 
         // ── Session ──

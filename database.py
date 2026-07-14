@@ -279,6 +279,13 @@ def add_whitelisted_email(email):
     finally:
         conn.close()
 
+def remove_whitelisted_email(email):
+    conn = get_db()
+    conn.execute("DELETE FROM whitelisted_emails WHERE email = ?", (email,))
+    conn.commit()
+    conn.close()
+    return True
+
 
 # --- Course / Module Management ---
 
