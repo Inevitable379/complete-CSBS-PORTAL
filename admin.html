@@ -582,6 +582,7 @@
             el.classList.remove('hidden');
             el.innerHTML = (c.topics||[]).map(t=>`<div class="topic-row"><span class="tstate ${t.url?'has':'no'}"></span>
                 <span class="tname">${esc(t.name)}</span>${t.url?`<a href="${esc(t.url)}" target="_blank">view</a>`:'<span style="font-size:.72rem;color:var(--text-3)">no file</span>'}
+                <button class="btn btn-ghost" onclick="renameTopic(${t.id}, ${cid}, '${esc(t.name).replace(/'/g, "\\'")}', this)" style="padding:2px 6px;margin-left:auto"><i class="fas fa-pen"></i></button>
                 <button class="btn btn-danger" onclick="delTopic(${t.id}, ${cid}, this)"><i class="fas fa-xmark"></i></button></div>`).join('')
                 + `<div style="display:flex;gap:var(--sp-2);margin-top:var(--sp-3)">
                     <input id="newtopic-${cid}" placeholder="Add a topic…" style="flex:1;padding:var(--sp-2) var(--sp-3);background:var(--bg-0);border:1px solid var(--border);border-radius:var(--r-sm);font-family:inherit;font-size:.82rem">
@@ -593,6 +594,14 @@
             try { await fetchJSON('/api/topics', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({subject_code:c.code, topic_name:name}) });
                 toast('Topic added'); courses=await fetchJSON('/api/modules'); renderCourseList(); toggleTopics(cid);
             } catch(e){ toast(e.message,'err'); }
+        }
+        async function renameTopic(tid, cid, currentName, btn){
+            const newName = prompt('Enter new topic name:', currentName);
+            if(!newName || newName === currentName) return;
+            btn.disabled=true;
+            try { await fetchJSON('/api/topics/'+tid, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({name:newName}) });
+                toast('Topic renamed'); courses=await fetchJSON('/api/modules'); onCourseChange(); renderCourseList(); toggleTopics(cid);
+            } catch(e){ toast(e.message,'err'); btn.disabled=false; }
         }
         async function delTopic(tid, cid, btn){
             if(!await confirmDialog('Remove this topic and its link?')) return;

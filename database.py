@@ -179,6 +179,15 @@ def delete_topic(topic_id):
     return True
 
 
+def rename_topic(topic_id, new_name):
+    """Rename a specific topic."""
+    conn = get_db()
+    conn.execute("UPDATE topics SET name = ? WHERE id = ?", (new_name, topic_id))
+    conn.commit()
+    conn.close()
+    return True
+
+
 # --- Materials Management ---
 
 def get_all_materials():

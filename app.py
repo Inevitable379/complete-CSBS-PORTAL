@@ -12,7 +12,8 @@ from database import (
     init_db, get_all_courses, update_topic_url,
     get_all, add_item, delete_item, get_count,
     get_whitelisted_emails, add_course, delete_course,
-    add_topic, delete_topic, get_all_materials, unlink_material
+    add_topic, delete_topic, get_all_materials, unlink_material,
+    rename_topic
 )
 from auth import verify_google_token, login_required, admin_required
 
@@ -386,6 +387,16 @@ def create_app():
     def api_delete_topic(topic_id):
         """Remove a single topic by id."""
         delete_topic(topic_id)
+        return jsonify({"success": True})
+
+    @app.route('/api/topics/<int:topic_id>', methods=['PUT'])
+    @admin_required
+    def api_rename_topic(topic_id):
+        data = request.json
+        new_name = data.get('name', '').strip()
+        if not new_name:
+            return jsonify({"error": "Topic name cannot be empty"}), 400
+        rename_topic(topic_id, new_name)
         return jsonify({"success": True})
 
     # -----------------------------------------------------------------------

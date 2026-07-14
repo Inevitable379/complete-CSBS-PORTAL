@@ -293,9 +293,8 @@ function renderModules(courses) {
     const colors = ['#6366F1','#8B5CF6','#EC4899','#F59E0B','#10B981','#3B82F6','#EF4444','#14B8A6','#F97316','#06B6D4','#84CC16','#A855F7'];
     grid.innerHTML = courses.map((c, i) => {
         const color = colors[i % colors.length];
-        const topics = (c.topics || []).map(t => {
-            if (t.url) return `<div class="topic-item"><a href="${esc(t.url)}" target="_blank"><i class="fas fa-file-lines" style="color:${color};font-size:0.75rem"></i> ${esc(t.name)}</a></div>`;
-            return `<div class="topic-item"><span class="no-file"><i class="fas fa-circle" style="font-size:0.3rem;vertical-align:middle;margin-right:6px"></i>${esc(t.name)}</span></div>`;
+        const topics = (c.topics || []).filter(t => t.url).map(t => {
+            return `<div class="topic-item"><a href="${esc(t.url)}" target="_blank"><i class="fas fa-file-lines" style="color:${color};font-size:0.75rem"></i> ${esc(t.name)}</a></div>`;
         }).join('');
         const creditsBadge = c.credits ? `<span class="badge badge-accent" style="font-size:0.7rem"><i class="fas fa-graduation-cap" style="margin-right:4px"></i>${c.credits} Credits</span>` : '';
         const internalsHtml = c.internal_marks ? `<div class="course-internals"><i class="fas fa-clipboard-check"></i> <strong>CA / Internals:</strong> ${esc(c.internal_marks)}</div>` : '';
