@@ -273,6 +273,7 @@
                         <button onclick="setManage('announcements', this)">Announcements</button>
                         <button onclick="setManage('exams', this)">Exams</button>
                         <button onclick="setManage('projects', this)">Projects</button>
+                        <button onclick="setManage('materials', this)">Materials</button>
                     </div>
                     <div id="manageList"><div class="a-empty"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div>
                 </section>
@@ -517,12 +518,19 @@
             if(!items.length){ box.innerHTML = `<div class="a-empty"><i class="fas fa-inbox"></i>Nothing here yet.</div>`; return; }
             box.className = 'a-list';
             box.innerHTML = items.map(it=>{
-                let title='', sub='';
+                let title='', sub='', actionHtml='';
                 if(cat==='exams'){ title=`${esc(it.course||'')} · ${esc(it.type||'')}`; sub=`${esc(it.date||'')} ${it.time?'· '+esc(it.time):''}`; }
                 else if(cat==='announcements'){ title=esc(it.title||''); sub=`<span class="chip ${it.type==='urgent'?'urgent':''}">${esc(it.type||'info')}</span> ${esc(it.date||'')}`; }
+                else if(cat==='materials'){ title=`${esc(it.subject_code)} — ${esc(it.topic_name)}`; sub=`<a href="${esc(it.url)}" target="_blank" style="color:var(--accent);text-decoration:underline">View material</a>`; }
                 else { title=esc(it.title||''); sub=`${esc(it.subject_code||it.course||'')} · ${esc(it.date||it.due_date||'')}`; }
-                return `<div class="a-item"><div class="txt"><b>${title}</b><span>${sub}</span></div>
-                    <button class="btn btn-danger" onclick="delEntry('${cat}','${esc(it.id)}',this)"><i class="fas fa-trash"></i> Delete</button></div>`;
+                
+                if(cat === 'materials') {
+                    actionHtml = `<button class="btn btn-danger" onclick="unlinkMaterial('${esc(it.id)}',this)"><i class="fas fa-unlink"></i> Remove Link</button>`;
+                } else {
+                    actionHtml = `<button class="btn btn-danger" onclick="delEntry('${cat}','${esc(it.id)}',this)"><i class="fas fa-trash"></i> Delete</button>`;
+                }
+                
+                return `<div class="a-item"><div class="txt"><b>${title}</b><span>${sub}</span></div>${actionHtml}</div>`;
             }).join('');
         }
         async function delEntry(cat, id, btn){
@@ -531,6 +539,15 @@
             try { await fetchJSON('/api/delete', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({category:cat, id}) });
                 btn.closest('.a-item').remove(); toast('Deleted');
             } catch(e){ toast(e.message,'err'); btn.disabled=false; btn.innerHTML='<i class="fas fa-trash"></i> Delete'; }
+        }
+        async function unlinkMaterial(id, btn){
+            if(!await confirmDialog('This will remove the file/link from the topic. The topic itself will remain.', 'Remove material link?')) return;
+            btn.disabled=true; btn.innerHTML='<i class="fas fa-spinner fa-spin"></i>';
+            try { await fetchJSON('/api/materials/'+id, { method:'DELETE' });
+                btn.closest('.a-item').remove(); toast('Link removed');
+                courses = await fetchJSON('/api/modules');
+                if(currentManage === 'courses') renderCourseList();
+            } catch(e){ toast(e.message,'err'); btn.disabled=false; btn.innerHTML='<i class="fas fa-unlink"></i> Remove Link'; }
         }
 
         // ── Courses & topics ──

@@ -12,7 +12,7 @@ from database import (
     init_db, get_all_courses, update_topic_url,
     get_all, add_item, delete_item, get_count,
     get_whitelisted_emails, add_course, delete_course,
-    add_topic, delete_topic
+    add_topic, delete_topic, get_all_materials, unlink_material
 )
 from auth import verify_google_token, login_required, admin_required
 
@@ -153,6 +153,19 @@ def create_app():
         if category not in valid:
             return jsonify([])
         return jsonify(get_all(category))
+
+    @app.route('/api/materials')
+    @admin_required
+    def api_materials():
+        """Get all topics with attached materials."""
+        return jsonify(get_all_materials())
+
+    @app.route('/api/materials/<int:topic_id>', methods=['DELETE'])
+    @admin_required
+    def api_delete_material(topic_id):
+        """Remove the material link from a topic without deleting the topic."""
+        unlink_material(topic_id)
+        return jsonify({"success": True})
 
     @app.route('/api/stats')
     @login_required

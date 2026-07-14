@@ -179,6 +179,32 @@ def delete_topic(topic_id):
     return True
 
 
+# --- Materials Management ---
+
+def get_all_materials():
+    """Return all topics that have a URL attached, joined with their course details."""
+    conn = get_db()
+    query = '''
+        SELECT t.id, t.name as topic_name, t.url, 
+               c.code as subject_code, c.title as course_title 
+        FROM topics t
+        JOIN courses c ON t.course_id = c.id
+        WHERE t.url != '' AND t.url IS NOT NULL
+        ORDER BY t.id DESC
+    '''
+    rows = _rows_to_dicts(conn.execute(query).fetchall())
+    conn.close()
+    return rows
+
+def unlink_material(topic_id):
+    """Remove the URL from a topic, keeping the topic itself."""
+    conn = get_db()
+    conn.execute("UPDATE topics SET url = '' WHERE id = ?", (topic_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+
 # --- Generic CRUD for assignments, projects, exams, announcements ---
 
 VALID_TABLES = {'assignments', 'projects', 'exams', 'announcements'}
