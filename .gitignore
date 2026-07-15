@@ -3,6 +3,11 @@
 .env.*
 !.env.example
 
+# --- Google API credentials (Drive uploader) — NEVER commit these ---
+credentials.json
+token.json
+client_secret*.json
+
 # --- Database & data (contains real content; back up separately) ---
 data/
 *.db
