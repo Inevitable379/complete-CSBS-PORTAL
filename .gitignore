@@ -32,3 +32,12 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# --- Heavy 3D assets not (yet) used by ETHER — keep out of git ---
+static/assets/hdri_4k/
+static/assets/hdri/
+static/assets/models_hq/
+static/assets/models/Soldier.glb
+static/assets/models/Xbot.glb
+static/assets/premium/textures_4k/
+static/assets/premium/planets_8k/earth_8k.jpg

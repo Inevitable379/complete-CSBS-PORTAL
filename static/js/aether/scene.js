@@ -8,6 +8,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
+import { createWings, updateWings } from './wings.js';
 
 // ── Scene State ─────────────────────────────────────────────
 let scene, camera, renderer, composer;
@@ -118,6 +119,8 @@ export function initScene(canvas) {
     createDustParticles();
     createEnvironmentGeometry();
     createHoloCore();
+    createProceduralAssets();
+    createWings(scene);
     createSectionMarkers();
     createLighting();
 
@@ -567,6 +570,9 @@ export function animate() {
         }
     });
 
+    // Wing structures (spinners, pulsers, orbiters, signal rings)
+    updateWings(elapsed, delta);
+
     // Slowly rotate star field
     if (starField) {
         starField.rotation.y += 0.0001;
@@ -619,6 +625,10 @@ export function animate() {
         dustParticles.geometry.attributes.position.needsUpdate = true;
     }
 
+    if (proceduralAnimations) {
+        proceduralAnimations(elapsed, delta);
+    }
+
     // Subtle camera parallax from mouse
     if (camera) {
         camera.rotation.y += (mouseX * 0.01 - camera.rotation.y) * 0.02;
@@ -647,6 +657,110 @@ function onResize() {
     camera.updateProjectionMatrix();
     renderer.setSize(w, h);
     composer.setSize(w, h);
+}
+
+// ── Procedural Assets (Hologram, Energy Sphere, etc.) ────────
+let proceduralAnimations = null;
+function createProceduralAssets() {
+    const animators = [];
+
+    // 1. Hologram Table
+    const holoTableGroup = new THREE.Group();
+    holoTableGroup.position.set(-15, 2, -10); // Placed off-center
+    
+    // Table Base
+    const tableBase = new THREE.Mesh(
+        new THREE.CylinderGeometry(3, 2.5, 0.5, 32),
+        new THREE.MeshStandardMaterial({ color: 0x111520, roughness: 0.2, metalness: 0.9 })
+    );
+    holoTableGroup.add(tableBase);
+    
+    // Hologram Mesh
+    const holoMesh = new THREE.Mesh(
+        new THREE.TorusKnotGeometry(1.5, 0.4, 128, 32),
+        new THREE.MeshBasicMaterial({ color: 0x22D3EE, wireframe: true, transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending })
+    );
+    holoMesh.position.y = 2.5;
+    holoTableGroup.add(holoMesh);
+    animators.push((t) => {
+        holoMesh.rotation.y += 0.01;
+        holoMesh.rotation.x = Math.sin(t) * 0.2;
+    });
+    scene.add(holoTableGroup);
+
+    // 2. Energy Sphere
+    const sphereGeo = new THREE.SphereGeometry(2, 64, 64);
+    const sphereMat = new THREE.MeshPhysicalMaterial({
+        color: 0x8B5CF6, emissive: 0x4DA8FF, emissiveIntensity: 0.8,
+        transmission: 0.9, opacity: 1, transparent: true,
+        roughness: 0.1, ior: 1.5, thickness: 2.0,
+    });
+    const energySphere = new THREE.Mesh(sphereGeo, sphereMat);
+    energySphere.position.set(15, 4, -20);
+    scene.add(energySphere);
+    animators.push((t) => {
+        energySphere.position.y = 4 + Math.sin(t * 1.5) * 0.5;
+        energySphere.rotation.y += 0.005;
+        // Pulse emissive
+        energySphere.material.emissiveIntensity = 0.5 + Math.sin(t * 3) * 0.5;
+    });
+
+    // 3. Glass Terminal
+    const terminalGeo = new THREE.BoxGeometry(4, 3, 0.1);
+    const terminalMat = new THREE.MeshPhysicalMaterial({
+        color: 0x000000, transmission: 0.95, opacity: 1,
+        transparent: true, roughness: 0.05, clearcoat: 1.0,
+        clearcoatRoughness: 0.1, ior: 1.6
+    });
+    const glassTerminal = new THREE.Mesh(terminalGeo, terminalMat);
+    glassTerminal.position.set(5, 3, -15);
+    glassTerminal.rotation.y = -Math.PI / 6;
+    
+    // Terminal UI glow
+    const terminalUI = new THREE.Mesh(
+        new THREE.PlaneGeometry(3.6, 2.6),
+        new THREE.MeshBasicMaterial({ color: 0x22D3EE, wireframe: true, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending })
+    );
+    terminalUI.position.z = 0.06;
+    glassTerminal.add(terminalUI);
+    scene.add(glassTerminal);
+
+    // 4. Circular Door
+    const doorGroup = new THREE.Group();
+    doorGroup.position.set(-25, 4, 15);
+    doorGroup.rotation.y = Math.PI / 4;
+    const doorRing = new THREE.Mesh(
+        new THREE.TorusGeometry(4, 0.3, 16, 64),
+        new THREE.MeshStandardMaterial({ color: 0x222222, metalness: 1.0, roughness: 0.4 })
+    );
+    doorGroup.add(doorRing);
+    const doorIris = new THREE.Mesh(
+        new THREE.CircleGeometry(3.8, 8),
+        new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.8, roughness: 0.5, side: THREE.DoubleSide })
+    );
+    doorGroup.add(doorIris);
+    scene.add(doorGroup);
+    animators.push((t) => {
+        // Iris open/close effect based on time
+        const scale = 0.5 + Math.sin(t * 0.5) * 0.5; // 0 to 1
+        doorIris.scale.set(scale, scale, 1);
+    });
+
+    // 5. Light Strips
+    const stripGroup = new THREE.Group();
+    for (let i = 0; i < 5; i++) {
+        const strip = new THREE.Mesh(
+            new THREE.BoxGeometry(0.2, 8, 0.1),
+            new THREE.MeshBasicMaterial({ color: new THREE.Color(0x4DA8FF).multiplyScalar(5) }) // Overdrive for bloom
+        );
+        strip.position.set(20 + i * 2, 4, 10);
+        stripGroup.add(strip);
+    }
+    scene.add(stripGroup);
+
+    proceduralAnimations = (elapsed, delta) => {
+        animators.forEach(fn => fn(elapsed, delta));
+    };
 }
 
 // ── Exports ─────────────────────────────────────────────────
