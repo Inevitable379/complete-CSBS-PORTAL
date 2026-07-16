@@ -29,6 +29,18 @@ export const SECTION_POSITIONS = {
     gpa:           { pos: new THREE.Vector3(0, 5, 45),     look: new THREE.Vector3(0, 2, 60) },
 };
 
+// ── Per-Wing Identity Colors ────────────────────────────
+export const WING_COLORS = {
+    dashboard:     0x4DA8FF, // command blue
+    modules:       0x8B5CF6, // archive violet
+    assignments:   0xF5A623, // logistics amber
+    projects:      0x22D3EE, // shipyard cyan
+    announcements: 0xFB7185, // comms rose
+    schedule:      0x34D399, // navigation green
+    attendance:    0xFF6B4A, // reactor orange
+    gpa:           0xE879F9, // observatory fuchsia
+};
+
 // ── Initialize Scene ────────────────────────────────────────
 export function initScene(canvas) {
     // Scene
@@ -105,6 +117,7 @@ export function initScene(canvas) {
     createNebulaParticles();
     createDustParticles();
     createEnvironmentGeometry();
+    createHoloCore();
     createSectionMarkers();
     createLighting();
 
@@ -307,20 +320,23 @@ function createEnvironmentGeometry() {
     // Floating platforms at section positions
     Object.entries(SECTION_POSITIONS).forEach(([name, { pos }]) => {
         if (name === 'dashboard') return; // Dashboard is at center
+        const wingColor = WING_COLORS[name] || 0x4DA8FF;
 
         // Hexagonal platform
         const platformGeo = new THREE.CylinderGeometry(5, 5, 0.15, 6);
-        const platform = new THREE.Mesh(platformGeo, emissiveBlue.clone());
+        const platformMat = emissiveBlue.clone();
+        platformMat.emissive = new THREE.Color(wingColor);
+        const platform = new THREE.Mesh(platformGeo, platformMat);
         platform.position.copy(pos).add(new THREE.Vector3(0, -3, 0));
         scene.add(platform);
 
-        // Edge glow ring
+        // Edge glow ring — wing color
         const edgeRing = new THREE.Mesh(
             new THREE.TorusGeometry(5, 0.03, 8, 6),
             new THREE.MeshBasicMaterial({
-                color: 0x4DA8FF,
+                color: wingColor,
                 transparent: true,
-                opacity: 0.3,
+                opacity: 0.35,
             })
         );
         edgeRing.rotation.x = Math.PI / 2;
@@ -375,14 +391,116 @@ function createEnvironmentGeometry() {
     }
 }
 
+// ── Holo Core (Command Core centerpiece at origin) ──────────
+let holoCore = null;
+function createHoloCore() {
+    holoCore = new THREE.Group();
+
+    // Inner solid sphere — dark body with pulsing emissive
+    const coreMat = new THREE.MeshStandardMaterial({
+        color: 0x0a0e18,
+        emissive: 0x4DA8FF,
+        emissiveIntensity: 0.5,
+        roughness: 0.15,
+        metalness: 0.9,
+    });
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(2.2, 2), coreMat);
+    holoCore.add(core);
+    holoCore.userData.core = core;
+
+    // Wireframe hologram shell
+    const shell = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(3.1, 1),
+        new THREE.MeshBasicMaterial({
+            color: 0x4DA8FF,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.18,
+        })
+    );
+    holoCore.add(shell);
+    holoCore.userData.shell = shell;
+
+    // Outer latitude/longitude cage
+    const cage = new THREE.Mesh(
+        new THREE.SphereGeometry(4.0, 18, 12),
+        new THREE.MeshBasicMaterial({
+            color: 0x8B5CF6,
+            wireframe: true,
+            transparent: true,
+            opacity: 0.06,
+        })
+    );
+    holoCore.add(cage);
+    holoCore.userData.cage = cage;
+
+    // Equatorial data ring — thin, bright
+    const dataRing = new THREE.Mesh(
+        new THREE.TorusGeometry(5.2, 0.04, 8, 96),
+        new THREE.MeshStandardMaterial({
+            color: 0x111520,
+            emissive: 0x4DA8FF,
+            emissiveIntensity: 1.2,
+            roughness: 0.3,
+            metalness: 1.0,
+        })
+    );
+    dataRing.rotation.x = Math.PI / 2;
+    holoCore.add(dataRing);
+    holoCore.userData.dataRing = dataRing;
+
+    // Orbiting satellites — one per wing, in that wing's color
+    const satellites = [];
+    const wingNames = Object.keys(SECTION_POSITIONS).filter(n => n !== 'dashboard');
+    wingNames.forEach((name, i) => {
+        const sat = new THREE.Mesh(
+            new THREE.OctahedronGeometry(0.22, 0),
+            new THREE.MeshStandardMaterial({
+                color: 0x090B10,
+                emissive: WING_COLORS[name] || 0x4DA8FF,
+                emissiveIntensity: 1.4,
+                roughness: 0.2,
+                metalness: 0.8,
+            })
+        );
+        const angle = (i / wingNames.length) * Math.PI * 2;
+        sat.userData = {
+            angle,
+            radius: 6.5 + (i % 3) * 0.7,
+            speed: 0.25 + (i % 4) * 0.06,
+            tilt: (i % 2 === 0 ? 1 : -1) * (0.15 + i * 0.04),
+        };
+        holoCore.add(sat);
+        satellites.push(sat);
+    });
+    holoCore.userData.satellites = satellites;
+
+    // Vertical light beam through the core
+    const beam = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.06, 0.06, 26, 8, 1, true),
+        new THREE.MeshBasicMaterial({
+            color: 0x4DA8FF,
+            transparent: true,
+            opacity: 0.12,
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+        })
+    );
+    holoCore.add(beam);
+
+    holoCore.position.set(0, 1, 0);
+    scene.add(holoCore);
+}
+
 // ── Section Markers (glowing indicators) ────────────────────
 function createSectionMarkers() {
     const markerGeo = new THREE.IcosahedronGeometry(0.4, 1);
 
     Object.entries(SECTION_POSITIONS).forEach(([name, { pos }]) => {
+        const wingColor = WING_COLORS[name] || 0x8B5CF6;
         const markerMat = new THREE.MeshStandardMaterial({
             color: 0x090B10,
-            emissive: name === 'dashboard' ? 0x4DA8FF : 0x8B5CF6,
+            emissive: wingColor,
             emissiveIntensity: 0.8,
             roughness: 0.2,
             metalness: 0.8,
@@ -392,11 +510,8 @@ function createSectionMarkers() {
         marker.position.copy(pos);
         scene.add(marker);
 
-        // Point light at marker
-        const light = new THREE.PointLight(
-            name === 'dashboard' ? 0x4DA8FF : 0x8B5CF6,
-            0.5, 15
-        );
+        // Point light at marker — wing color
+        const light = new THREE.PointLight(wingColor, 0.5, 15);
         light.position.copy(pos);
         scene.add(light);
 
@@ -428,7 +543,9 @@ function createLighting() {
 }
 
 // ── Highlight Active Section Marker ─────────────────────────
+let activeSection = 'dashboard';
 export function highlightSection(name) {
+    activeSection = name;
     Object.entries(sectionMarkers).forEach(([key, { mesh, light }]) => {
         const isActive = key === name;
         mesh.material.emissiveIntensity = isActive ? 1.5 : 0.4;
@@ -459,6 +576,37 @@ export function animate() {
     // Drift nebula
     if (nebulaParticles) {
         nebulaParticles.rotation.y += 0.0002;
+    }
+
+    // Holo core: breathe, spin layers, orbit satellites
+    if (holoCore) {
+        const { core, shell, cage, dataRing, satellites } = holoCore.userData;
+        if (core) {
+            core.rotation.y += 0.004;
+            core.material.emissiveIntensity = 0.45 + Math.sin(elapsed * 1.4) * 0.2;
+            const s = 1 + Math.sin(elapsed * 1.4) * 0.03;
+            core.scale.setScalar(s);
+        }
+        if (shell) { shell.rotation.y -= 0.002; shell.rotation.x += 0.001; }
+        if (cage)  { cage.rotation.y += 0.0008; }
+        if (dataRing) { dataRing.rotation.z += 0.005; }
+        if (satellites) {
+            satellites.forEach(sat => {
+                const d = sat.userData;
+                d.angle += d.speed * 0.016;
+                sat.position.set(
+                    Math.cos(d.angle) * d.radius,
+                    Math.sin(d.angle * 1.3) * d.radius * d.tilt * 0.4,
+                    Math.sin(d.angle) * d.radius
+                );
+                sat.rotation.y += 0.03;
+            });
+        }
+        // Whole core drifts gently
+        holoCore.position.y = 1 + Math.sin(elapsed * 0.5) * 0.3;
+        // Dim the core when away from dashboard so it doesn't fight other wings
+        const targetOpacity = activeSection === 'dashboard' ? 0.18 : 0.08;
+        if (shell) shell.material.opacity += (targetOpacity - shell.material.opacity) * 0.03;
     }
 
     // Drift dust particles

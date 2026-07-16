@@ -336,6 +336,7 @@ ul, ol { list-style: none; }
 
 .aether-panel {
     pointer-events: auto;
+    position: relative;
     width: 100%;
     max-width: 1000px;
     max-height: calc(100vh - 100px);
@@ -1376,3 +1377,59 @@ ul, ol { list-style: none; }
 /* ── Page section toggle (used by JS) ────────────────────── */
 .page-section { display: none; }
 .page-section.active { display: block; }
+
+/* ── Wing Identity Theme ─────────────────────────────────────
+   --wing is set by JS (applyWingTheme) each time the camera
+   arrives at a wing. Defaults to command blue. */
+:root {
+    --wing:       var(--accent);
+    --wing-glow:  var(--accent-glow);
+    --wing-muted: var(--accent-muted);
+}
+
+/* transition the tint smoothly wherever it's used */
+.nav-item.active i,
+.section-label,
+.aether-topbar-section,
+.aether-panel::after {
+    transition: color 0.6s ease, background 0.6s ease, box-shadow 0.6s ease, border-color 0.6s ease;
+}
+
+/* nav active pip follows the wing color */
+.nav-item.active i {
+    background: var(--wing-muted);
+    color: var(--wing);
+    box-shadow: 0 0 12px var(--wing-glow);
+}
+
+/* section eyebrow + rule pick up the wing color */
+.section-label { color: var(--wing); }
+.section-label::before { background: var(--wing); }
+
+/* topbar section name glows in wing color */
+.aether-topbar-section { color: var(--wing); }
+
+/* thin wing-colored energy line across the top of the panel */
+.aether-panel::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 10%; right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--wing), transparent);
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+/* section title underline accent */
+.section-header .section-title {
+    position: relative;
+}
+.section-header .section-title::after {
+    content: '';
+    position: absolute;
+    left: 0; bottom: -6px;
+    width: 28px; height: 2px;
+    border-radius: 2px;
+    background: var(--wing);
+    transition: background 0.6s ease;
+}

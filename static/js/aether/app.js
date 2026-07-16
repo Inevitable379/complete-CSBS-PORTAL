@@ -4,7 +4,7 @@
    ============================================================ */
 
 import * as THREE from 'three';
-import { initScene, animate as sceneAnimate, highlightSection, getCamera } from './scene.js';
+import { initScene, animate as sceneAnimate, highlightSection, getCamera, WING_COLORS } from './scene.js';
 import { initCamera, flyTo, playEntrance, setExploreMode, getExploreMode, updateCamera, setProximityCallback, getCurrentSection } from './camera.js';
 
 // ── Constants ───────────────────────────────────────────────
@@ -127,6 +127,9 @@ function navigate(section, flyCamera = true) {
     // Highlight 3D marker
     highlightSection(section);
 
+    // Shift UI accent to this wing's identity color
+    applyWingTheme(section);
+
     // Fly camera to section (unless called from proximity detection)
     if (flyCamera && !getExploreMode()) {
         flyTo(section, 2.0, () => {
@@ -169,6 +172,17 @@ function showPanel(section) {
         panel.offsetHeight;
         panel.classList.add('visible');
     }
+}
+
+// ── Wing Theme (UI accent follows the active wing) ──────────
+function applyWingTheme(section) {
+    const hex = WING_COLORS[section];
+    if (hex === undefined) return;
+    const r = (hex >> 16) & 255, g = (hex >> 8) & 255, b = hex & 255;
+    const root = document.documentElement.style;
+    root.setProperty('--wing', `rgb(${r},${g},${b})`);
+    root.setProperty('--wing-glow', `rgba(${r},${g},${b},0.25)`);
+    root.setProperty('--wing-muted', `rgba(${r},${g},${b},0.10)`);
 }
 
 // ── Section Data Loader ─────────────────────────────────────
