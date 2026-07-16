@@ -61,6 +61,13 @@ def create_app():
             return redirect('/login.html')
         return send_from_directory(Config.BASE_DIR, 'admin.html')
 
+    @app.route('/ether')
+    def ether_page():
+        """ETHER — immersive 3D mode (desktop). Same data, different universe."""
+        if 'user_email' not in session:
+            return redirect('/login.html')
+        return send_from_directory(Config.BASE_DIR, 'ether.html')
+
     # -----------------------------------------------------------------------
     # Auth routes
     # -----------------------------------------------------------------------
