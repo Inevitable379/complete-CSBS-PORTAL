@@ -29,8 +29,54 @@ function loadTex(path, srgb = true) {
     });
 }
 
+// ── Wing Name Signs (holographic labels in 3D space) ────────
+const WING_LABELS = {
+    dashboard: 'Command Core',
+    modules: 'Research Archives',
+    assignments: 'Logistics Bay',
+    projects: 'Shipyard',
+    announcements: 'Comms Array',
+    schedule: 'Navigation',
+    attendance: 'Reactor Core',
+    gpa: 'Observatory',
+};
+
+function makeSign(text, colorHex) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512; canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+    const c = '#' + colorHex.toString(16).padStart(6, '0');
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.shadowColor = c;
+    ctx.shadowBlur = 18;
+    ctx.fillStyle = c;
+    ctx.font = '600 40px "Space Grotesk", "Inter", sans-serif';
+    ctx.fillText(text.toUpperCase(), 256, 52);
+    ctx.shadowBlur = 0;
+    ctx.globalAlpha = 0.8;
+    ctx.fillRect(206, 88, 100, 2);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+        map: tex, transparent: true, opacity: 0.85, depthWrite: false, fog: false,
+    }));
+    sprite.scale.set(11, 2.75, 1);
+    return sprite;
+}
+
+function createWingSigns(scene) {
+    Object.entries(WING_LABELS).forEach(([name, label]) => {
+        const sign = makeSign(label, WING_COLORS[name] || 0x4DA8FF);
+        const { pos } = SECTION_POSITIONS[name];
+        sign.position.set(pos.x, pos.y + 5.5, pos.z);
+        scene.add(sign);
+    });
+}
+
 // ── Entry Point ─────────────────────────────────────────────
 export function createWings(scene) {
+    createWingSigns(scene);
     buildArchives(scene);      // modules
     buildLogistics(scene);     // assignments
     buildShipyard(scene);      // projects
@@ -281,7 +327,7 @@ async function addSaturn(scene) {
 
     const saturn = new THREE.Mesh(
         new THREE.SphereGeometry(26, 48, 48),
-        new THREE.MeshStandardMaterial({ map: satTex, roughness: 1, metalness: 0 })
+        new THREE.MeshStandardMaterial({ map: satTex, roughness: 1, metalness: 0, fog: false })
     );
     saturn.position.set(-190, 45, -230);
     saturn.rotation.z = 0.45;
@@ -303,7 +349,7 @@ async function addSaturn(scene) {
             ringGeo,
             new THREE.MeshBasicMaterial({
                 map: ringTex, transparent: true, opacity: 0.85,
-                side: THREE.DoubleSide, depthWrite: false,
+                side: THREE.DoubleSide, depthWrite: false, fog: false,
             })
         );
         ring.position.copy(saturn.position);
@@ -329,10 +375,11 @@ async function addEarth(scene) {
             specularMap: spec || undefined,
             specular: new THREE.Color(0x333333),
             shininess: 12,
+            fog: false,
         })
     );
     // Beyond the Observatory wing — the thing the telescope points at
-    earth.position.set(0, 14, 170);
+    earth.position.set(0, 18, 130);
     scene.add(earth);
     spinners.push({ obj: earth, speed: 0.015, axis: 'y' });
 
@@ -341,7 +388,7 @@ async function addEarth(scene) {
         new THREE.SphereGeometry(18.8, 48, 48),
         new THREE.MeshBasicMaterial({
             color: 0x4DA8FF, transparent: true, opacity: 0.07,
-            side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false,
+            side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false, fog: false,
         })
     );
     glow.position.copy(earth.position);
@@ -358,7 +405,7 @@ async function addMoon(scene) {
     if (!tex) return;
     const moon = new THREE.Mesh(
         new THREE.SphereGeometry(3.5, 32, 32),
-        new THREE.MeshStandardMaterial({ map: tex, roughness: 1, metalness: 0 })
+        new THREE.MeshStandardMaterial({ map: tex, roughness: 1, metalness: 0, fog: false })
     );
     const center = wingAnchor('schedule', 4);
     moon.position.copy(center).add(new THREE.Vector3(14, 4, -10));

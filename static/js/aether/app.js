@@ -5,7 +5,7 @@
 
 import * as THREE from 'three';
 import { initScene, animate as sceneAnimate, highlightSection, getCamera, WING_COLORS } from './scene.js';
-import { initCamera, flyTo, playEntrance, setExploreMode, getExploreMode, updateCamera, setProximityCallback, getCurrentSection } from './camera.js';
+import { initCamera, flyTo, playEntrance, setExploreMode, getExploreMode, updateCamera, setProximityCallback, getCurrentSection, setRailCallbacks, VOYAGE_ORDER, getVoyageT } from './camera.js';
 
 // ── Constants ───────────────────────────────────────────────
 const API_BASE = '';
@@ -46,6 +46,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     setProximityCallback((section) => {
         navigate(section, false); // don't fly camera, we're already there
     });
+
+    // Voyage rail: panels dock in when you arrive, slide out when you leave
+    setRailCallbacks({
+        onArrive: (section) => {
+            if (currentSection !== section) {
+                currentSection = section;
+                syncNavUI(section);
+                loadSection(section);
+            }
+            showPanel(section);
+        },
+        onDepart: () => {
+            hideCurrentPanel();
+        },
+        onProgress: updateVoyageLine,
+    });
+    buildVoyageLine();
 
     updateLoadingStatus('Loading systems...', 75);
 
@@ -99,44 +116,37 @@ function initNavigation() {
 
 window.navigate = navigate; // expose globally for inline handlers
 
-function navigate(section, flyCamera = true) {
-    if (currentSection === section && document.querySelector('.aether-panel.visible')) return;
+const SECTION_TITLES = {
+    dashboard: 'Command Core',
+    modules: 'Research Archives',
+    assignments: 'Logistics Bay',
+    projects: 'Engineering Shipyard',
+    announcements: 'Communications',
+    schedule: 'Navigation Systems',
+    attendance: 'Reactor Core',
+    gpa: 'Observatory',
+};
 
-    const prevSection = currentSection;
-    currentSection = section;
-
-    // Update nav active state
+function syncNavUI(section) {
     document.querySelectorAll('.nav-item[data-section]').forEach(item => {
         item.classList.toggle('active', item.dataset.section === section);
     });
-
-    // Update topbar title
-    const titles = {
-        dashboard: 'Command Core',
-        modules: 'Research Archives',
-        assignments: 'Logistics Bay',
-        projects: 'Engineering Shipyard',
-        announcements: 'Communications',
-        schedule: 'Navigation Systems',
-        attendance: 'Reactor Core',
-        gpa: 'Observatory',
-    };
     const sectionTitle = document.getElementById('section-title');
-    if (sectionTitle) sectionTitle.textContent = titles[section] || section;
-
-    // Highlight 3D marker
+    if (sectionTitle) sectionTitle.textContent = SECTION_TITLES[section] || section;
     highlightSection(section);
-
-    // Shift UI accent to this wing's identity color
     applyWingTheme(section);
+    updateStationChart(section);
+}
 
-    // Fly camera to section (unless called from proximity detection)
+function navigate(section, flyCamera = true) {
+    if (currentSection === section && document.querySelector('.aether-panel.visible')) return;
+
+    currentSection = section;
+    syncNavUI(section);
+
+    // Fly camera to section (rail's onArrive shows the panel)
     if (flyCamera && !getExploreMode()) {
-        flyTo(section, 2.0, () => {
-            showPanel(section);
-        });
-        // Start exit animation on current panel
-        hideCurrentPanel();
+        flyTo(section, 2.0);
     } else {
         hideCurrentPanel();
         setTimeout(() => showPanel(section), 100);
@@ -174,6 +184,78 @@ function showPanel(section) {
     }
 }
 
+// ── Voyage Line (route progress along the bottom) ───────────
+function buildVoyageLine() {
+    const el = document.getElementById('voyage-line');
+    if (!el) return;
+    el.innerHTML = VOYAGE_ORDER.map((name) =>
+        `<button class="voyage-stop" data-stop="${name}" title="${SECTION_TITLES[name] || name}"
+            onclick="navigate('${name}')"><span class="voyage-dot"></span></button>`
+    ).join('<span class="voyage-track"></span>');
+}
+
+function updateVoyageLine(t, nearest, docked) {
+    const ship = document.getElementById('voyage-ship');
+    if (ship) ship.style.left = (t * 100).toFixed(2) + '%';
+    document.querySelectorAll('.voyage-stop').forEach((el) => {
+        el.classList.toggle('near', el.dataset.stop === nearest);
+        el.classList.toggle('docked', docked && el.dataset.stop === nearest);
+    });
+    const hint = document.getElementById('voyage-hint');
+    if (hint) hint.textContent = docked
+        ? (SECTION_TITLES[nearest] || nearest)
+        : 'En route → ' + (SECTION_TITLES[nearest] || nearest);
+}
+
+// ── Station Chart (dashboard: where am I, what's around) ────
+const WING_MAP = {   // top-down station map, x/z from SECTION_POSITIONS
+    dashboard:     { x: 50, y: 50, icon: 'fa-circle-nodes' },
+    announcements: { x: 50, y: 26, icon: 'fa-tower-broadcast' },
+    schedule:      { x: 50, y: 12, icon: 'fa-compass' },
+    modules:       { x: 22, y: 32, icon: 'fa-box-archive' },
+    assignments:   { x: 22, y: 68, icon: 'fa-clipboard-list' },
+    gpa:           { x: 50, y: 84, icon: 'fa-star-half-stroke' },
+    projects:      { x: 78, y: 68, icon: 'fa-wrench' },
+    attendance:    { x: 78, y: 32, icon: 'fa-atom' },
+};
+
+function renderStationChart() {
+    const el = document.getElementById('station-chart');
+    if (!el || el.dataset.built) return;
+    el.dataset.built = '1';
+
+    const pts = VOYAGE_ORDER.map((n) => `${WING_MAP[n].x},${WING_MAP[n].y}`).join(' ');
+    let html = `<svg viewBox="0 0 100 100" preserveAspectRatio="none" class="chart-route">
+        <polygon points="${pts}" fill="none" stroke="currentColor" stroke-width="0.6"
+            stroke-dasharray="2 2" opacity="0.35"/></svg>`;
+
+    html += Object.entries(WING_MAP).map(([name, m]) => {
+        return `<button class="chart-node" data-chart="${name}"
+            style="left:${m.x}%;top:${m.y}%" onclick="navigate('${name}')">
+            <i class="fas ${m.icon}"></i>
+            <span class="chart-node-label">${SECTION_TITLES[name] || name}</span>
+            <span class="chart-node-hop"></span>
+        </button>`;
+    }).join('');
+    el.innerHTML = html;
+    updateStationChart('dashboard');
+}
+
+function updateStationChart(section) {
+    document.querySelectorAll('.chart-node').forEach((el) => {
+        const name = el.dataset.chart;
+        el.classList.toggle('here', name === section);
+        const from = VOYAGE_ORDER.indexOf(section);
+        const to = VOYAGE_ORDER.indexOf(name);
+        const fwd = (to - from + VOYAGE_ORDER.length) % VOYAGE_ORDER.length;
+        const hop = el.querySelector('.chart-node-hop');
+        if (hop) hop.textContent = name === section ? 'You are here'
+            : (fwd <= VOYAGE_ORDER.length / 2
+                ? `${fwd} stop${fwd > 1 ? 's' : ''} ↑`
+                : `${VOYAGE_ORDER.length - fwd} stop${VOYAGE_ORDER.length - fwd > 1 ? 's' : ''} ↓`);
+    });
+}
+
 // ── Wing Theme (UI accent follows the active wing) ──────────
 function applyWingTheme(section) {
     const hex = WING_COLORS[section];
@@ -201,6 +283,7 @@ function loadSection(section) {
 
 // ── Dashboard ───────────────────────────────────────────────
 async function loadDashboard() {
+    renderStationChart();
     showDashboardSkeletons();
     try {
         const [stats, announcements] = await Promise.all([

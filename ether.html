@@ -84,7 +84,11 @@
         <section class="aether-panel" id="panel-dashboard">
             <div class="greeting fade-up">
                 <h2 id="greeting-text">Good evening</h2>
-                <p class="text-caption">Station status: all systems nominal</p>
+                <p class="text-caption">Station status: all systems nominal · scroll to voyage between wings</p>
+            </div>
+            <div class="glass-card mb-6 chart-card">
+                <div class="section-header"><h2 class="section-title">Station Chart</h2><span class="text-caption">scroll ↑ forward · ↓ back · or tap a wing</span></div>
+                <div class="station-chart" id="station-chart"></div>
             </div>
             <div class="priority-strip" id="priority-strip"></div>
             <div class="grid-4 mb-6">
@@ -223,6 +227,13 @@
             <div class="empty-state hidden" id="gpa-empty"><i class="fas fa-star-half-stroke"></i><h3>No constellations charted</h3><p>Courses for this semester will appear here.</p></div>
         </section>
 
+    </div>
+
+    <!-- ═══ VOYAGE LINE (route progress) ═══ -->
+    <div class="voyage-bar" id="voyage-bar">
+        <span class="voyage-hint" id="voyage-hint">Command Core</span>
+        <div class="voyage-line" id="voyage-line"></div>
+        <div class="voyage-ship" id="voyage-ship"><i class="fas fa-shuttle-space"></i></div>
     </div>
 
     <!-- ═══ EXPLORE MODE ═══ -->
