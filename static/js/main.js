@@ -115,13 +115,15 @@ function loadSection(section) {
 async function loadDashboard() {
     // Show skeletons while loading
     showDashboardSkeletons();
+    // Schedule is the hero — kick it off first, don't make it wait on stats
+    const schedulePromise = renderDashboardSchedule();
     try {
         const [stats, announcements] = await Promise.all([
-            fetchJSON('/api/stats'),
-            fetchJSON('/api/announcements')
+            cachedJSON('/api/stats'),
+            cachedJSON('/api/announcements')
         ]);
         renderStatCards(stats, announcements);
-        renderDashboardAnnouncements(announcements.slice(0, 3));
+        renderDashboardAnnouncements(announcements.slice(0, 2));
         loadPriorityStrip(stats, announcements);
         loadLivePanel(stats, announcements);
 
@@ -129,7 +131,32 @@ async function loadDashboard() {
         console.error('Dashboard load error:', e);
         showToast('Could not load dashboard data — retrying...', 'error');
     }
-    fetchScheduleForTimeline();
+    await schedulePromise;
+    markDashUpdated();
+}
+
+// Small "Updated Xm ago" hint under the greeting — since we serve cached
+// data instantly, this tells people how fresh what they're seeing is.
+function markDashUpdated() {
+    try { localStorage.setItem('dash_updated_at', Date.now()); } catch (e) {}
+    renderDashUpdated();
+}
+function renderDashUpdated() {
+    const sub = document.getElementById('greeting-sub');
+    if (!sub) return;
+    let t = 0;
+    try { t = parseInt(localStorage.getItem('dash_updated_at')) || 0; } catch (e) {}
+    if (!t) return;
+    const mins = Math.floor((Date.now() - t) / 60000);
+    const label = mins < 1 ? 'Updated just now' : mins < 60 ? `Updated ${mins}m ago` : `Updated ${Math.floor(mins / 60)}h ago`;
+    let pill = document.getElementById('dash-updated-pill');
+    if (!pill) {
+        pill = document.createElement('span');
+        pill.id = 'dash-updated-pill';
+        pill.className = 'dash-updated-pill';
+        sub.after(pill);
+    }
+    pill.innerHTML = `<i class="fas fa-rotate"></i> ${label}${navigator.onLine === false ? ' · offline' : ''}`;
 }
 
 function showDashboardSkeletons() {
@@ -150,8 +177,6 @@ function renderStatCards(stats, announcements) {
     animateNumber('stat-assignments', aCount);
     document.getElementById('stat-assignments-sub').textContent = aCount === 0 ? 'All caught up ✓' : aCount === 1 ? 'waiting for you' : 'need your attention';
 
-    // Courses
-    animateNumber('stat-modules', stats.modules || 0);
 
     // Exam countdown — smart and specific
     const examEl = document.getElementById('stat-exam');
@@ -263,7 +288,12 @@ async function loadModules() {
     if (!modulesData.length) {
         try {
             modulesData = await fetchJSON('/api/modules');
-        } catch (e) { showToast('Failed to load modules', 'error'); return; }
+        } catch (e) {
+            const grid = document.getElementById('modules-grid');
+            if (grid) grid.innerHTML = retryCardHTML('loadModules');
+            else showToast('Failed to load courses', 'error');
+            return;
+        }
     }
     buildSemesterMenu();
     renderModules(modulesData.filter(c => (c.semester || 1) === currentSemester));
@@ -298,7 +328,7 @@ function renderModules(courses) {
         }).join('');
         const creditsBadge = c.credits ? `<span class="badge badge-accent" style="font-size:0.7rem"><i class="fas fa-graduation-cap" style="margin-right:4px"></i>${c.credits} Credits</span>` : '';
         const internalsHtml = c.internal_marks ? `<div class="course-internals"><i class="fas fa-clipboard-check"></i> <strong>CA / Internals:</strong> ${esc(c.internal_marks)}</div>` : '';
-        return `<div class="card module-card" style="padding:0;overflow:hidden">
+        return `<div class="card module-card" data-course-id="${esc(c.id)}" style="padding:0;overflow:hidden">
             <div class="module-header" style="border-left:3px solid ${color}">
                 <i class="${esc(c.icon || 'fas fa-book')}" style="color:${color}"></i>
                 <h3>${esc(c.title)}</h3>
@@ -308,7 +338,7 @@ function renderModules(courses) {
                 </div>
             </div>
             ${internalsHtml}
-            <div class="module-body">${topics || '<p class="text-caption">No topics yet</p>'}</div>
+            <div class="module-body">${topics || '<p class="text-caption">Materials show up here as faculty share them</p>'}</div>
         </div>`;
     }).join('');
 }
@@ -339,11 +369,25 @@ document.addEventListener('click', e => {
 });
 
 // ── Assignments ─────────────────────────────────
+// Inline "couldn't load — retry" card, better than a toast that vanishes
+function retryCardHTML(fnName) {
+    return `<div class="empty-state retry-card" style="padding:var(--sp-8)">
+        <i class="fas fa-wifi"></i>
+        <h3>Couldn't load this</h3>
+        <p>Check your connection.</p>
+        <button class="btn-ghost retry-btn" onclick="${fnName}()"><i class="fas fa-rotate-right"></i> Try again</button>
+    </div>`;
+}
+
 async function loadAssignments() {
     try {
         assignmentsData = await fetchJSON('/api/assignments');
         renderAssignments(assignmentsData);
-    } catch (e) { showToast('Failed to load assignments', 'error'); }
+    } catch (e) {
+        const grid = document.getElementById('assignments-grid');
+        if (grid && !assignmentsData.length) grid.innerHTML = retryCardHTML('loadAssignments');
+        else showToast('Failed to load assignments', 'error');
+    }
 }
 
 function isMarkedDone(category, id) {
@@ -396,7 +440,11 @@ async function loadProjects() {
     try {
         projectsData = await fetchJSON('/api/projects');
         renderProjects(projectsData);
-    } catch (e) { showToast('Failed to load projects', 'error'); }
+    } catch (e) {
+        const grid = document.getElementById('projects-grid');
+        if (grid && !projectsData.length) grid.innerHTML = retryCardHTML('loadProjects');
+        else showToast('Failed to load projects', 'error');
+    }
 }
 
 function renderProjects(items) {
@@ -425,7 +473,11 @@ async function loadAnnouncements() {
     try {
         announcementsData = await fetchJSON('/api/announcements');
         renderAnnouncements(announcementsData);
-    } catch (e) { showToast('Failed to load announcements', 'error'); }
+    } catch (e) {
+        const container = document.getElementById('announcements-container');
+        if (container && !announcementsData.length) container.innerHTML = retryCardHTML('loadAnnouncements');
+        else showToast('Failed to load announcements', 'error');
+    }
 }
 
 function renderAnnouncements(items) {
@@ -673,65 +725,679 @@ function renderExams(items) {
     }).join('');
 }
 
+// Schedule → Timetable tab: DB-backed week grid (same data as the dashboard)
 async function fetchScheduleTable() {
+    const wrap = document.getElementById('tt-tab-content');
+    if (!wrap) return;
+    if (!wrap.dataset.loaded) {
+        wrap.innerHTML = `<div class="skeleton" style="height:220px;border-radius:var(--r-lg)"></div>`;
+    }
     try {
-        const csv = await fetchText(SCHEDULE_CSV);
-        const rows = csv.split('\n').map(r => r.split(',').map(c => c.trim().replace(/"/g, '')));
-        if (rows.length < 2) return;
-        const table = document.getElementById('timetable');
-        const header = rows[0].map(h => `<th>${esc(h)}</th>`).join('');
-        const body = rows.slice(1).filter(r => r.length > 1).map(r =>
-            '<tr>' + r.map((c, i) => {
-                let cls = '';
-                const cl = c.toLowerCase();
-                if (i === 0) cls = 'day-header';
-                else if (cl.includes('break')) cls = 'break-cell';
-                else if (cl.includes('lunch')) cls = 'lunch-cell';
-                else if (c && c !== '-') cls = 'subject-cell';
-                return `<td class="${cls}">${esc(c)}</td>`;
-            }).join('') + '</tr>'
-        ).join('');
-        table.innerHTML = `<thead><tr>${header}</tr></thead><tbody>${body}</tbody>`;
-    } catch (e) { console.error('Schedule fetch error:', e); }
-}
+        await loadScheduleSems();
+        const slots = await getTimetable(currentScheduleSem);
 
-async function fetchScheduleForTimeline() {
-    try {
-        const csv = await fetchText(SCHEDULE_CSV);
-        const rows = csv.split('\n').map(r => r.split(',').map(c => c.trim().replace(/"/g, '')));
-        if (rows.length < 2) return;
-        const days = ['sunday','monday','tuesday','wednesday','thursday','friday','saturday'];
-        const today = days[new Date().getDay()];
-        const headers = rows[0];
-        const todayRow = rows.find(r => r[0] && r[0].toLowerCase().includes(today));
-        const timeline = document.getElementById('today-timeline');
-        if (!todayRow) {
-            const isWeekend = [0, 6].includes(new Date().getDay());
-            timeline.innerHTML = `<div class="empty-state" style="padding:var(--sp-6);text-align:left;display:flex;align-items:center;gap:var(--sp-4)">
-                <i class="fas ${isWeekend ? 'fa-mug-hot' : 'fa-calendar-xmark'}" style="font-size:1.5rem;color:var(--text-3)"></i>
-                <div>
-                    <h3 style="font-size:0.9rem;margin-bottom:2px">${isWeekend ? 'It\'s the weekend!' : 'No classes today'}</h3>
-                    <p style="font-size:0.8rem;color:var(--text-2)">${isWeekend ? 'Recharge and come back Monday.' : 'Enjoy your free day.'}</p>
+        const semPills = availableScheduleSems.map(s =>
+            `<button class="filter-pill ${s === currentScheduleSem ? 'active' : ''}" onclick="selectTTSem(${s})">Sem ${s}</button>`
+        ).join('');
+
+        wrap.innerHTML = `
+            <div class="tt-toolbar">
+                <div class="filter-bar" style="margin-bottom:0">${semPills}</div>
+                <div class="tt-legend">
+                    <span><span class="tt-legend-dot" style="background:var(--accent)"></span>Now</span>
+                    <span><span class="tt-legend-dot" style="background:var(--success)"></span>Lunch</span>
+                    <span class="text-caption" style="font-size:0.72rem"><i class="fas fa-hand-pointer"></i> Tap a class for materials</span>
                 </div>
-            </div>`;
-            return;
-        }
-        const hour = new Date().getHours();
-        timeline.innerHTML = todayRow.slice(1).map((cell, i) => {
-            const time = headers[i + 1] || '';
-            const isNow = (hour >= 8 + i && hour < 9 + i);
-            const isBreak = cell.toLowerCase().includes('break') || cell.toLowerCase().includes('lunch');
-            return `<div class="timeline-slot ${isNow ? 'now' : ''} ${isBreak ? 'break' : ''}">
-                <div class="time">${esc(time)}</div>
-                <div class="subject">${esc(cell || '—')}</div>
-            </div>`;
-        }).join('');
+            </div>
+            <div class="dash-grid-table-container tt-grid-wrap">${buildWeekGridTable(slots, { highlightNow: true, clickable: true })}</div>`;
+        wrap.dataset.loaded = '1';
+
+        // Bring today's row into view on small screens
+        const liveCell = wrap.querySelector('.tt-live-cell');
+        if (liveCell) setTimeout(() => liveCell.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }), 150);
     } catch (e) {
-        document.getElementById('today-timeline').innerHTML = `<div class="empty-state" style="padding:var(--sp-6);text-align:left;display:flex;align-items:center;gap:var(--sp-4)">
-            <i class="fas fa-wifi-slash" style="font-size:1.2rem;color:var(--text-3)"></i>
-            <div><p style="font-size:0.8rem;color:var(--text-2)">Could not load schedule. Check your connection.</p></div>
+        console.error('Timetable load error:', e);
+        wrap.innerHTML = `<div class="empty-state" style="padding:var(--sp-8)">
+            <i class="fas fa-table-cells"></i>
+            <h3>Couldn't load the timetable</h3>
+            <p>Check your connection and try again.</p>
         </div>`;
     }
+}
+
+window.selectTTSem = function(sem) {
+    if (sem === currentScheduleSem) return;
+    currentScheduleSem = sem;
+    localStorage.setItem('scheduleSem', sem);
+    fetchScheduleTable();
+}
+
+// ── Timetable API & State ───────────────────────────────────
+let currentScheduleSem = parseInt(localStorage.getItem('scheduleSem')) || 1;
+let availableScheduleSems = [];
+let timetableCache = {};  // sem -> slots[]
+const TT_CACHE_TTL = 10 * 60 * 1000; // 10 min
+
+async function getTimetable(sem) {
+    if (timetableCache[sem]) return timetableCache[sem];
+    const key = `tt_cache_${sem}`;
+    let stored = null;
+    try { stored = JSON.parse(localStorage.getItem(key)); } catch (e) { /* corrupt — refetch */ }
+    const refresh = fetchJSON(`/api/timetable?sem=${sem}`).then(slots => {
+        timetableCache[sem] = slots;
+        try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), slots })); } catch (e) { /* quota */ }
+        return slots;
+    });
+    // Timetables barely change — paint instantly from any stored copy
+    // (up to 7 days old) while the background refresh updates the cache.
+    if (stored && stored.slots && Date.now() - stored.t < 7 * 24 * 60 * 60 * 1000) {
+        timetableCache[sem] = stored.slots;
+        refresh.catch(() => {});
+        return stored.slots;
+    }
+    return refresh;
+}
+
+function slotTimeRange(slotTime) {
+    const m = (slotTime || '').match(/(\d{1,2}):(\d{2})\s*[-–]\s*(\d{1,2}):(\d{2})/);
+    if (!m) return null;
+    let sh = parseInt(m[1]), sm = parseInt(m[2]), eh = parseInt(m[3]), em = parseInt(m[4]);
+    if (sh < 8) sh += 12; if (eh < 8) eh += 12;
+    return { start: sh * 60 + sm, end: eh * 60 + em };
+}
+
+function isBreakSlot(slot) {
+    const cl = (slot.subject || '').toLowerCase();
+    return cl.includes('break') || cl.includes('lunch');
+}
+
+function isFreeSlot(slot) {
+    return !slot.subject || slot.subject === '-' || slot.subject === '—';
+}
+
+async function loadScheduleSems() {
+    if (availableScheduleSems.length) return availableScheduleSems;
+    // Cached list paints the dropdown instantly; refresh quietly after.
+    try {
+        const stored = JSON.parse(localStorage.getItem('tt_sems'));
+        if (stored && stored.length) availableScheduleSems = stored;
+    } catch (e) { /* ignore */ }
+    const refresh = fetchJSON('/api/timetable/semesters').then(sems => {
+        if (sems && sems.length) {
+            availableScheduleSems = sems;
+            try { localStorage.setItem('tt_sems', JSON.stringify(sems)); } catch (e) {}
+        }
+        return sems;
+    }).catch(() => {});
+    if (!availableScheduleSems.length) {
+        await refresh;
+        if (!availableScheduleSems.length) availableScheduleSems = [1, 3, 5, 7];
+    }
+    if (!availableScheduleSems.includes(currentScheduleSem)) {
+        currentScheduleSem = availableScheduleSems[0];
+        localStorage.setItem('scheduleSem', currentScheduleSem);
+    }
+    return availableScheduleSems;
+}
+
+// ── Dashboard Timeline ───────────────────────────────────
+let dashRefreshTimer = null;
+let dashHeroSlots = { live: null, next: null };
+let dashChipReg = {};   // 'today' | day name → slot array (for chip → materials lookup)
+
+async function renderDashboardSchedule() {
+    try {
+        await loadScheduleSems();
+        renderDashSemMenu();
+        const slots = await getTimetable(currentScheduleSem);
+
+        renderDashHeroCards(slots);
+        renderWeekTable(slots);
+
+        clearInterval(dashRefreshTimer);
+        dashRefreshTimer = setInterval(() => {
+            if (currentSection !== 'dashboard') { clearInterval(dashRefreshTimer); return; }
+            renderDashHeroCards(slots);
+        }, 60000);
+    } catch (e) {
+        console.error('Dashboard schedule error:', e);
+    }
+}
+
+// ── Dashboard semester dropdown ──
+function renderDashSemMenu() {
+    const menu = document.getElementById('dash-sem-menu');
+    const label = document.getElementById('dash-sem-label');
+    const picker = document.getElementById('dash-sem-picker');
+    if (!menu || !label) return;
+    label.textContent = `Sem ${currentScheduleSem}`;
+    menu.innerHTML = availableScheduleSems.map(s =>
+        `<button class="dash-sem-option ${s === currentScheduleSem ? 'active' : ''}" onclick="selectDashSem(${s})">
+            <i class="fas ${s === currentScheduleSem ? 'fa-check' : 'fa-graduation-cap'}"></i> Semester ${s}
+        </button>`
+    ).join('');
+    if (picker) picker.style.display = availableScheduleSems.length > 1 ? '' : 'none';
+}
+
+window.toggleDashSemMenu = function() {
+    document.getElementById('dash-sem-picker')?.classList.toggle('open');
+}
+
+window.selectDashSem = function(sem) {
+    document.getElementById('dash-sem-picker')?.classList.remove('open');
+    if (sem === currentScheduleSem) return;
+    currentScheduleSem = sem;
+    localStorage.setItem('scheduleSem', sem);
+    renderDashboardSchedule();
+}
+
+// Close the sem menu on outside click
+document.addEventListener('click', (e) => {
+    const picker = document.getElementById('dash-sem-picker');
+    if (picker && !picker.contains(e.target)) picker.classList.remove('open');
+});
+
+function todayClassSlots(slots) {
+    const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    return (slots || []).filter(s => s.day === todayName).sort((a, b) => a.slot_order - b.slot_order);
+}
+
+// When today's classes are done (or it's the weekend), preview the next
+// class day instead of leaving a dead "all caught up" card.
+function renderTomorrowPreview(slots) {
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const todayIdx = new Date().getDay();
+    let nextDay = null, label = '', offset = 0;
+    for (let i = 1; i <= 7 && !nextDay; i++) {
+        const name = dayNames[(todayIdx + i) % 7];
+        const daySlots = (slots || []).filter(s => s.day === name && !isBreakSlot(s) && !isFreeSlot(s))
+            .sort((a, b) => a.slot_order - b.slot_order);
+        if (daySlots.length) { nextDay = daySlots; label = name; offset = i; }
+    }
+
+    const doneCard = (msg) => `<div class="dash-hero-combined-card" style="width: 100%; background: var(--bg-0); padding: 24px; border-radius: 24px; box-shadow: var(--shadow-md); border: 1px solid var(--border);">
+        <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-1);"><i class="fas fa-check-circle" style="color:var(--success);"></i> You're all caught up!</div>
+        <div style="font-size: 0.85rem; color: var(--text-2); margin-top: 4px;">${msg}</div>
+    </div>`;
+
+    if (!nextDay) return doneCard('No more classes right now.');
+
+    const first = nextDay[0];
+    const startTime = (first.slot_time || '').split(/[-–]/)[0].trim();
+    const dayLabel = offset === 1 ? 'Tomorrow' : label;
+    const labCount = nextDay.filter(s => /lab/i.test(s.subject)).length;
+    // Distinct class blocks (merged labs count once), same merge rule as the grid
+    let blocks = 0, prev = null;
+    nextDay.forEach(s => { if (!prev || prev.subject !== s.subject || prev.room !== s.room) blocks++; prev = s; });
+
+    return `<div class="dash-hero-combined-card" style="width: 100%;">
+        <div style="flex:1;">
+            <div style="font-size: 0.8rem; font-weight: 700; color: var(--violet); text-transform: uppercase; margin-bottom: 6px;">
+                <i class="fas fa-moon" style="margin-right:6px;"></i>${dayLabel.toUpperCase()}'S PLAN
+            </div>
+            <div style="font-size: 1.15rem; font-weight: 700; color: var(--text-1); margin-bottom: 8px;">
+                Starts ${startTime} with ${esc(first.subject)}
+            </div>
+            <div style="font-size: 0.85rem; color: var(--text-2); display:flex; flex-wrap:wrap; gap: 6px 16px;">
+                <span><i class="fas fa-layer-group" style="width:16px;"></i> ${blocks} class${blocks > 1 ? 'es' : ''}</span>
+                ${labCount ? `<span><i class="fas fa-flask" style="width:16px;"></i> ${labCount > 1 ? labCount + ' labs' : 'has a lab'}</span>` : ''}
+                <span><i class="fas fa-location-dot" style="width:16px;"></i> ${esc(first.room || 'TBA')} first</span>
+            </div>
+        </div>
+    </div>`;
+}
+
+function renderDashHeroCards(slots) {
+    const wrap = document.getElementById('dash-hero-cards');
+    if (!wrap) return;
+
+    const todaySlots = todayClassSlots(slots).filter(s => !isBreakSlot(s) && !isFreeSlot(s));
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    let live = null, next = null;
+    for (let s of todaySlots) {
+        const t = slotTimeRange(s.slot_time);
+        if (!t) continue;
+        if (nowMin >= t.start && nowMin < t.end) live = s;
+        else if (nowMin < t.start && !next) next = s;
+    }
+
+    dashHeroSlots.live = live;
+    dashHeroSlots.next = next;
+    heroStripReg = todaySlots;
+
+    if (!todaySlots.length || (!live && !next)) {
+        // day over or no classes — tomorrow preview takes the stage
+        wrap.innerHTML = dayTimelineHTML(todaySlots, nowMin) + renderTomorrowPreview(slots);
+        return;
+    }
+
+    // One horizontal strip: every class today as a compact card.
+    // Done classes grey out, the live one glows, scroll right for what's ahead.
+    const cards = todaySlots.map((slot, i) => {
+        const t = slotTimeRange(slot.slot_time);
+        const isLive = t && nowMin >= t.start && nowMin < t.end;
+        const isPast = t && nowMin >= t.end;
+        const isNext = slot === next;
+
+        let stateClass = isLive ? 'live' : isPast ? 'past' : 'upcoming';
+        let tag, tagStyle = '';
+        if (isLive) {
+            tag = `<span class="hero-slot-dot"></span> NOW`;
+        } else if (isPast) {
+            tag = `<i class="fas fa-check" style="font-size:0.6rem"></i> DONE`;
+        } else if (isNext) {
+            tag = `UP NEXT`;
+        } else {
+            tag = esc((slot.slot_time || '').split(/[-–]/)[0].trim());
+        }
+
+        let meta;
+        if (isLive) {
+            const rem = t.end - nowMin;
+            const pct = Math.min(100, Math.max(0, Math.round(((nowMin - t.start) / (t.end - t.start)) * 100)));
+            meta = `<div class="hero-slot-meta"><i class="fas fa-clock"></i> ${rem} min left · ${esc(slot.room || 'TBA')}</div>
+                <div class="hero-progress"><div class="hero-progress-fill" style="width:${pct}%"></div></div>`;
+        } else if (isPast) {
+            meta = `<div class="hero-slot-meta">${esc(slot.slot_time || '')}</div>`;
+        } else {
+            const startsIn = t ? t.start - nowMin : null;
+            meta = `<div class="hero-slot-meta">${isNext && startsIn !== null ? `<i class="fas fa-hourglass-start"></i> in ${startsIn} min · ` : ''}${esc(slot.room || 'TBA')}</div>
+                <div class="hero-slot-meta"><i class="fas fa-user-tie"></i> ${esc(slot.faculty || 'TBA')}</div>`;
+        }
+
+        return `<div class="hero-slot-card ${stateClass}" onclick="openCourseFromStrip(${i})">
+            <div class="hero-slot-tag">${tag}</div>
+            <div class="hero-slot-subject">${esc(slot.subject)}</div>
+            ${meta}
+        </div>`;
+    }).join('');
+
+    wrap.innerHTML = dayTimelineHTML(todaySlots, nowMin) +
+        `<div class="hero-strip" id="hero-strip">${cards}</div>`;
+
+    // bring the live (or next) class into view
+    setTimeout(() => {
+        const target = wrap.querySelector('.hero-slot-card.live') || wrap.querySelector('.hero-slot-card.upcoming');
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }, 120);
+}
+
+let heroStripReg = [];
+window.openCourseFromStrip = function(i) {
+    if (heroStripReg[i]) openCourseForSlot(heroStripReg[i]);
+}
+
+// Big horizontal day timeline — one rainbow bar for the whole college day.
+// Filled (full color) up to now, upcoming part sits faded; ticks mark each
+// class boundary and a dot shows where "now" is between first and last class.
+function dayTimelineHTML(todaySlots, nowMin) {
+    if (!todaySlots.length) return '';
+    let dayStart = null, dayEnd = null;
+    const bounds = new Set();
+    for (const s of todaySlots) {
+        const t = slotTimeRange(s.slot_time);
+        if (!t) continue;
+        if (dayStart === null || t.start < dayStart) dayStart = t.start;
+        if (dayEnd === null || t.end > dayEnd) dayEnd = t.end;
+        bounds.add(t.start); bounds.add(t.end);
+    }
+    if (dayStart === null || dayEnd <= dayStart) return '';
+
+    const span = dayEnd - dayStart;
+    const pct = Math.min(100, Math.max(0, ((nowMin - dayStart) / span) * 100));
+    const done = nowMin >= dayEnd;
+
+    const ticks = [...bounds]
+        .filter(b => b > dayStart && b < dayEnd)
+        .map(b => `<span class="day-tl-tick" style="left:${(((b - dayStart) / span) * 100).toFixed(2)}%"></span>`)
+        .join('');
+
+    const label = done ? 'Day complete' :
+        nowMin < dayStart ? `Day starts ${fmtMin(dayStart)}` :
+        `${Math.round(pct)}% of the day done`;
+
+    return `
+    <div class="day-timeline">
+        <div class="day-tl-head">
+            <span class="day-tl-time">${fmtMin(dayStart)}</span>
+            <span class="day-tl-label">${label}</span>
+            <span class="day-tl-time">${fmtMin(dayEnd)}</span>
+        </div>
+        <div class="day-tl-track">
+            <div class="day-tl-rainbow"></div>
+            <div class="day-tl-veil" style="left:${pct.toFixed(2)}%"></div>
+            ${ticks}
+            ${!done && nowMin >= dayStart ? `<span class="day-tl-now" style="left:${pct.toFixed(2)}%"></span>` : ''}
+        </div>
+    </div>`;
+}
+
+// End time (minutes) of the most recently finished class today, or null if none ended yet
+function lastEndedSlotEnd(todaySlots, nowMin) {
+    let end = null;
+    for (const s of todaySlots) {
+        const t = slotTimeRange(s.slot_time);
+        if (t && nowMin >= t.end && (end === null || t.end > end)) end = t.end;
+    }
+    return end;
+}
+
+function fmtMin(min) {
+    let h = Math.floor(min / 60), m = min % 60;
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${h}:${String(m).padStart(2, '0')} ${ap}`;
+}
+
+// Today's Schedule strip now lives inside the hero (renderDashHeroCards) —
+// this stays only to clear the old container.
+function renderTodayTimeline(slots) {
+    const wrap = document.getElementById('dash-today-section');
+    if (wrap) wrap.innerHTML = '';
+    return;
+    // (legacy code below is unreachable, kept for reference)
+
+    const todaySlots = todayClassSlots(slots).filter(s => !isBreakSlot(s) && !isFreeSlot(s));
+    dashChipReg['today'] = todaySlots;
+
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+
+    let stripHtml = `<div class="dash-strip">` + todaySlots.map((s, i) => {
+        const t = slotTimeRange(s.slot_time);
+        const isNow = t && nowMin >= t.start && nowMin < t.end;
+        const isPast = t && nowMin >= t.end;
+        return dashChipHTML(s, isNow, isPast, 'today', i);
+    }).join('') + `</div>`;
+
+    wrap.innerHTML = `
+        <div class="dash-section-title" style="margin-bottom: 16px;"><span><i class="fas fa-calendar-day" style="margin-right:8px; color:var(--accent);"></i>Today's Schedule</span></div>
+        <div>${todaySlots.length ? stripHtml : '<div style="font-size:0.85rem; color:var(--text-3); padding: 12px; background: var(--bg-1); border-radius: 16px;">No classes today.</div>'}</div>
+    `;
+    
+    setTimeout(() => {
+        const liveEl = wrap.querySelector('.dash-chip.live');
+        if (liveEl) {
+            liveEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+    }, 100);
+}
+
+// ── Shared week-grid builder (dashboard fold + Schedule → Timetable tab) ──
+let ttSlotReg = [];  // slot registry for clickable timetable cells
+
+function buildWeekGridTable(slots, opts = {}) {
+    const dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const thStyle = "display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; height: 100%;";
+    const subThStyle = "font-size: 0.65rem; color: var(--text-3); font-weight: normal; font-family: var(--font-mono);";
+    const periods = [['P1', '8:45-9:35'], ['P2', '9:40-10:30'], ['P3', '10:35-11:25'], ['P4', '11:30-12:20'], ['P5', '12:25-1:15'], ['P6', '1:20-2:10'], ['P7', '2:15-3:05'], ['P8', '3:10-4:00']];
+    const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+    const now = new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    if (opts.clickable) ttSlotReg = [];
+
+    let html = `<table class="dash-grid-table"><thead><tr><th>Day</th>`
+        + periods.map(p => `<th><div style="${thStyle}"><span>${p[0]}</span><span style="${subThStyle}">(${p[1]})</span></div></th>`).join('')
+        + `</tr></thead><tbody>`;
+
+    dayOrder.forEach(d => {
+        const isToday = !!opts.highlightNow && d === todayName;
+        let rowHtml = `<tr${isToday ? ' class="tt-today-row"' : ''}><th>${d.slice(0, 3)}</th>`;
+        const dSlots = (slots || []).filter(s => s.day === d);
+
+        let p = 1;
+        while (p <= 8) {
+            const slot = dSlots.find(s => s.slot_order === p);
+            if (slot) {
+                // Determine colspan
+                let colspan = 1;
+                let nextP = p + 1;
+                while (nextP <= 8) {
+                    const nextSlot = dSlots.find(s => s.slot_order === nextP);
+                    if (nextSlot && nextSlot.subject === slot.subject && nextSlot.room === slot.room) {
+                        colspan++;
+                        nextP++;
+                    } else {
+                        break;
+                    }
+                }
+
+                let cellClass = "slot-regular";
+                if (isBreakSlot(slot)) cellClass = "slot-lunch";
+                else if (slot.subject_code && slot.subject_code.includes('29A')) cellClass = "slot-pink";
+
+                // Live-now highlight — span whole merged block (labs run 2-3 periods)
+                const tStart = slotTimeRange(slot.slot_time);
+                const lastSlot = dSlots.find(s => s.slot_order === p + colspan - 1) || slot;
+                const tEnd = slotTimeRange(lastSlot.slot_time) || tStart;
+                const isLive = isToday && tStart && !isBreakSlot(slot)
+                    && nowMin >= tStart.start && nowMin < tEnd.end;
+                if (isLive) cellClass += " tt-live-cell";
+
+                let clickAttr = '';
+                if (opts.clickable && !isBreakSlot(slot) && !isFreeSlot(slot)) {
+                    clickAttr = ` onclick="openCourseFromTT(${ttSlotReg.length})" title="Open course materials"`;
+                    cellClass += " tt-click";
+                    ttSlotReg.push(slot);
+                }
+
+                // Formatting text inside
+                let text = "";
+                if (isBreakSlot(slot)) {
+                    text = `<div style="font-weight: 800; color: var(--success); letter-spacing: 1px; font-size: 0.85rem;">L.U.N.C.H</div>`;
+                } else {
+                    // Create short form of subject name
+                    let shortName = esc(slot.subject);
+                    if (shortName.length > 12) {
+                        const ignoreWords = ['of', 'and', 'the', 'in', 'for', 'to', 'a', 'an'];
+                        const isLab = shortName.toLowerCase().includes('lab');
+                        const isTute = shortName.toLowerCase().includes('tutorial');
+
+                        let acronym = shortName.replace(/[^a-zA-Z0-9\s-]/g, '').split(/[\s-]+/)
+                            .filter(w => w && !ignoreWords.includes(w.toLowerCase()) && w.toLowerCase() !== 'lab' && w.toLowerCase() !== 'tutorial')
+                            .map(w => {
+                                // If word is roman numeral I, II, III etc, keep it
+                                if (/^(I|II|III|IV|V|VI)$/i.test(w)) return w.toUpperCase();
+                                return w[0].toUpperCase();
+                            })
+                            .join('');
+
+                        if (isLab) acronym += " (L)";
+                        if (isTute) acronym += " (T)";
+
+                        // Use acronym if it's meaningful, else fallback
+                        if (acronym.length > 1) shortName = acronym;
+                    }
+
+                    text = `<div style="font-weight: 700; color: var(--text-1); font-size: 0.85rem;">${shortName}</div>`;
+                    if (slot.room) {
+                        text += `<div style="font-weight: 500; font-size: 0.75rem; color: var(--text-2); margin-top: 4px;">in ${esc(slot.room)}</div>`;
+                    }
+                    if (slot.faculty) {
+                        text += `<div style="font-size:0.75rem; color:var(--text-3); font-weight: 500; margin-top:2px;"><i class="fas fa-user-tie" style="margin-right:3px;"></i>${esc(slot.faculty)}</div>`;
+                    }
+                    if (isLive) text += `<div class="tt-now-badge">NOW</div>`;
+                }
+
+                rowHtml += `<td class="${cellClass}" colspan="${colspan}"${clickAttr}>${text}</td>`;
+                p += colspan;
+            } else {
+                rowHtml += `<td></td>`;
+                p++;
+            }
+        }
+        rowHtml += `</tr>`;
+        html += rowHtml;
+    });
+    return html + `</tbody></table>`;
+}
+
+window.openCourseFromTT = function(idx) {
+    if (ttSlotReg[idx]) openCourseForSlot(ttSlotReg[idx]);
+}
+
+function renderWeekTable(slots) {
+    const wrap = document.getElementById('dash-week-section');
+    if (!wrap) return;
+
+    // On phones the full week table is overwhelming — start it folded there,
+    // open on desktop where there's room
+    const startFolded = window.innerWidth <= 640;
+    let tableHtml = `
+    <button class="dash-info-dropdown-btn" onclick="toggleWeekGrid()" style="margin-bottom: 12px;">
+        <span class="dash-section-title" style="font-size:1.05rem;"><i class="fas fa-calendar-week" style="margin-right:8px; color:var(--accent);"></i>CSBS — Semester ${currentScheduleSem}</span>
+        <i class="fas fa-chevron-down" id="week-grid-arrow" style="transition: transform 0.2s; transform: rotate(${startFolded ? 0 : 180}deg);"></i>
+    </button>
+    <div class="dash-grid-table-container" id="week-grid-content" ${startFolded ? 'style="display:none"' : ''}>${buildWeekGridTable(slots, { highlightNow: true })}</div>`;
+
+    // SUBJECT ALLOCATION table
+    const uniqueSubjects = {};
+    (slots || []).forEach(s => {
+        if (!isBreakSlot(s) && !isFreeSlot(s)) {
+            uniqueSubjects[s.subject] = { code: s.subject_code, teacher: s.faculty };
+        }
+    });
+
+    let allocRows = Object.keys(uniqueSubjects).map(sub => {
+        const info = uniqueSubjects[sub];
+        let ltpe = "3-0-0-0"; 
+        if (typeof modulesData !== 'undefined' && modulesData) {
+            const m = modulesData.find(c => c.code === info.code || c.title === sub);
+            if (m && m.credits) ltpe = `${m.credits}-0-0-0`;
+        }
+        return `
+            <tr>
+                <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">${esc(info.code || '--')}</td>
+                <td style="font-weight: 500; color: var(--text-1);">${esc(sub)}</td>
+                <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-2);">${esc(ltpe)}</td>
+                <td style="color: var(--text-2);">${esc(info.teacher || 'TBA')}</td>
+            </tr>
+        `;
+    }).join('');
+
+    let allocTable = `
+    <button class="dash-info-dropdown-btn" onclick="toggleFacultyInfo()" style="margin-top: 24px;">
+        <span><i class="fas fa-list-ul" style="margin-right: 8px; color: var(--accent);"></i> Subject Allocation & Faculty</span>
+        <i class="fas fa-chevron-down" id="faculty-info-arrow" style="transition: transform 0.2s;"></i>
+    </button>
+    <div class="dash-info-dropdown-content" id="faculty-info-content" style="display: none;">
+        <div style="overflow-x: auto;">
+            <table class="dash-alloc-table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Subject Name</th>
+                        <th>LTPE</th>
+                        <th>Faculty</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${allocRows || '<tr><td colspan="4" style="text-align:center;">No subjects found</td></tr>'}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    `;
+
+    wrap.innerHTML = tableHtml + allocTable;
+}
+
+// Week grid folds to just its header when clicked
+window.toggleWeekGrid = function() {
+    const content = document.getElementById('week-grid-content');
+    const arrow = document.getElementById('week-grid-arrow');
+    if (!content) return;
+    const folded = content.style.display === 'none';
+    content.style.display = folded ? '' : 'none';
+    if (arrow) arrow.style.transform = folded ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+window.toggleFacultyInfo = function() {
+    const content = document.getElementById('faculty-info-content');
+    const arrow = document.getElementById('faculty-info-arrow');
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+    } else {
+        content.style.display = 'none';
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+    }
+}
+
+window.toggleChipDetail = function(el) {
+    const detail = el.querySelector('.dash-chip-detail');
+    if (!detail) return;
+    const isOpened = detail.style.display === 'flex';
+    
+    if (!isOpened) {
+        detail.style.display = 'flex';
+        el.style.height = 'auto';
+    } else {
+        detail.style.display = 'none';
+    }
+}
+
+function dashChipHTML(s, isNow, isPast, group, idx) {
+    const startTime = (s.slot_time || '').split(/[-–]/)[0].trim();
+    return `
+        <div class="dash-chip ${isNow ? 'live' : ''} ${isPast ? 'past' : ''}" onclick="toggleChipDetail(this)">
+            <div class="dash-chip-header" style="display:flex; align-items:flex-start; gap:12px;">
+                <div class="dash-chip-time" style="font-family:var(--font-mono); font-weight:600; font-size:0.8rem; color: ${isNow ? 'var(--accent)' : 'var(--text-3)'}; margin-top: 2px;">${esc(startTime)}</div>
+                <div class="dash-chip-info" style="display:flex; flex-direction:column; gap:4px; flex:1; min-width:0;">
+                    <div style="font-weight:700; font-size:0.95rem; color:var(--text-1); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(s.subject)}</div>
+                    <div style="font-size:0.75rem; color:var(--text-2);"><i class="fas fa-location-dot"></i> ${esc(s.room || 'TBA')}</div>
+                </div>
+            </div>
+            
+            <div class="dash-chip-detail" style="display:none; flex-direction:column; gap:8px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
+                <div style="font-size:0.85rem; color:var(--text-2); display:flex; align-items:center; gap:8px;"><i class="fas fa-user" style="width:16px;"></i> ${esc(s.faculty || 'TBA')}</div>
+                <div style="font-size:0.85rem; color:var(--text-2); display:flex; align-items:center; gap:8px;"><i class="fas fa-barcode" style="width:16px;"></i> ${esc(s.subject_code || '--')}</div>
+                <div style="font-size:0.85rem; color:var(--text-2); display:flex; align-items:center; gap:8px;"><i class="fas fa-clock" style="width:16px;"></i> ${esc(s.slot_time)}</div>
+                <button onclick="event.stopPropagation(); openCourseFromChip('${group}', ${idx})" style="margin-top:8px; width:100%; padding:8px; border-radius:12px; background:var(--accent-muted); color:var(--accent); font-weight:700; font-size:0.85rem; border:none; cursor:pointer; transition:background 0.2s;" onmouseover="this.style.background='var(--border)'" onmouseout="this.style.background='var(--accent-muted)'"><i class="fas fa-book-open"></i> Go to Course</button>
+            </div>
+        </div>
+    `;
+}
+
+window.openCourseFromChip = function(group, idx) {
+    const slots = dashChipReg[group];
+    if (slots && slots[idx]) openCourseForSlot(slots[idx]);
+}
+
+window.openCourseFromHero = function(type) {
+    const slot = dashHeroSlots[type];
+    if (slot) openCourseForSlot(slot);
+}
+
+// Find the course matching a timetable slot and jump to its materials
+async function openCourseForSlot(slot) {
+    if (!modulesData.length) {
+        try { modulesData = await fetchJSON('/api/modules'); }
+        catch (e) { showToast('Could not load courses', 'error'); return; }
+    }
+    const norm = str => (str || '').toLowerCase().replace(/\s*\((l|t)\)\s*$/, '').replace(/\s+(lab|tutorial)$/, '').replace(/[^a-z0-9]/g, '');
+    const subj = norm(slot.subject);
+    const course = modulesData.find(c => slot.subject_code && c.code === slot.subject_code)
+        || modulesData.find(c => norm(c.title) === subj)
+        || modulesData.find(c => subj && (norm(c.title).includes(subj) || subj.includes(norm(c.title))));
+    if (!course) {
+        showToast(`No course materials for "${slot.subject}" yet`, 'error');
+        return;
+    }
+    // Land on the right semester, then highlight the card
+    currentSemester = course.semester || 1;
+    localStorage.setItem('semester', currentSemester);
+    navigate('modules');
+    setTimeout(() => {
+        const card = document.querySelector(`.module-card[data-course-id="${course.id}"]`);
+        if (card) {
+            card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            card.classList.add('course-flash');
+            setTimeout(() => card.classList.remove('course-flash'), 2400);
+        }
+    }, 350);
 }
 
 // ── Attendance ──────────────────────────────────
@@ -793,7 +1459,21 @@ function sortAttendance(type, btn) {
 // ── Attendance for Dashboard Stat ───────────────
 async function fetchAttendanceForDashboard() {
     try {
-        const csv = await fetchText(ATTENDANCE_CSV);
+        // Same stale-while-revalidate trick for the CSV — Google Sheets can be
+        // slow (server proxies it), so paint from the last copy instantly
+        const csvKey = 'swr_att_csv';
+        let csv = null, stored = null;
+        try { stored = JSON.parse(localStorage.getItem(csvKey)); } catch (e) { }
+        const refresh = fetchText(ATTENDANCE_CSV).then(text => {
+            try { localStorage.setItem(csvKey, JSON.stringify({ t: Date.now(), text })); } catch (e) { }
+            return text;
+        });
+        if (stored && Date.now() - stored.t < SWR_MAX_STALE) {
+            csv = stored.text;
+            refresh.catch(() => {});
+        } else {
+            csv = await refresh;
+        }
         const rows = csv.split('\n').map(r => r.split(',').map(c => c.trim().replace(/"/g, '')));
         if (rows.length < 2) return;
         const parsed = rows.slice(1).filter(r => r.length >= 6).map((r, i) => ({
@@ -802,36 +1482,90 @@ async function fetchAttendanceForDashboard() {
             percentage: parseFloat(r[5]) || 0
         }));
         if (!attendanceData.length) attendanceData = parsed;
+
         const avg = Math.round(parsed.reduce((s, a) => s + a.percentage, 0) / parsed.length);
-        animateNumber('stat-attendance', avg);
         const attEl = document.getElementById('stat-attendance');
-        // Append % after animation
-        setTimeout(() => { attEl.textContent = avg + '%'; }, 900);
         const sub = document.getElementById('stat-attendance-sub');
+        animateNumber('stat-attendance', avg);
+        setTimeout(() => { attEl.textContent = avg + '%'; }, 900);
         const lowCount = parsed.filter(a => a.percentage < 75).length;
-        if (lowCount > 0) {
-            sub.innerHTML = `<i class="fas fa-triangle-exclamation" style="color:var(--warning)"></i> ${lowCount} below 75%`;
-        } else {
-            sub.innerHTML = `<i class="fas fa-arrow-trend-up" style="color:var(--success)"></i> Class average`;
-        }
+        sub.innerHTML = lowCount > 0
+            ? `<i class="fas fa-triangle-exclamation" style="color:var(--warning)"></i> ${lowCount} below 75%`
+            : `<i class="fas fa-arrow-trend-up" style="color:var(--success)"></i> Class average`;
     } catch (e) {
         document.getElementById('stat-attendance-sub').textContent = 'Could not load';
         console.error('Attendance fetch for dashboard:', e);
     }
 }
 
+// Match the logged-in user to their attendance row: exact name, then
+// name-parts overlap, then USN digits found in the university email.
+// NOTE: built but intentionally NOT wired to the dashboard yet — waiting
+// on the class teacher's OK for attendance data. Flip csbs_show_my_att
+// in localStorage (or call this from renderStatCards) when approved.
+function findMyAttendanceRow(rows) {
+    const normName = s => (s || '').toLowerCase().replace(/[^a-z ]/g, '').replace(/\s+/g, ' ').trim();
+    const me = normName(userProfile.name);
+    if (me) {
+        let hit = rows.find(r => normName(r.name) === me);
+        if (hit) return hit;
+        const myParts = me.split(' ').filter(p => p.length > 2);
+        if (myParts.length) {
+            hit = rows.find(r => {
+                const rp = normName(r.name).split(' ');
+                return myParts.every(p => rp.includes(p));
+            });
+            if (hit) return hit;
+        }
+    }
+    // juug25btech26920@... — the digits usually appear in the USN
+    const m = (userProfile.email || '').match(/(\d{4,})@/);
+    if (m) {
+        const hit = rows.find(r => (r.usn || '').replace(/\D/g, '').includes(m[1]));
+        if (hit) return hit;
+    }
+    return null;
+}
+
+// "You can miss N more classes" (or "must attend the next N") to stay ≥75%
+function bunkMeterText(row) {
+    if (!row.total) return `<i class="fas fa-user"></i> Your attendance`;
+    const TARGET = 0.75;
+    if (row.percentage >= 75) {
+        // attended / (total + x) >= 0.75  →  x <= attended/0.75 - total
+        const canMiss = Math.floor(row.attended / TARGET - row.total);
+        return canMiss > 0
+            ? `<i class="fas fa-umbrella-beach" style="color:var(--success)"></i> You can miss ${canMiss} more class${canMiss > 1 ? 'es' : ''}`
+            : `<i class="fas fa-scale-balanced" style="color:var(--warning)"></i> Right at the edge — don't skip`;
+    }
+    // (attended + x) / (total + x) >= 0.75  →  x >= (0.75·total − attended)/0.25
+    const mustAttend = Math.ceil((TARGET * row.total - row.attended) / (1 - TARGET));
+    return `<i class="fas fa-person-running" style="color:var(--danger)"></i> Attend the next ${mustAttend} to reach 75%`;
+}
+
 // ── Greeting ────────────────────────────────────
+let userProfile = { name: '', email: '' };  // filled from auth check; used to find "my" attendance row
 async function initGreeting() {
     let name = 'there';
     try {
-        const res = await fetch('/api/auth/check', { credentials: 'same-origin' });
-        if (res.ok) {
+        // Reuse the auth check the page already fired in <head> — no 2nd request
+        const res = window.__authCheck
+            ? await window.__authCheck
+            : await fetch('/api/auth/check', { credentials: 'same-origin' });
+        if (res && res.ok) {
             const data = await res.json();
             name = data.name || 'there';
+            userProfile = { name: data.name || '', email: data.email || '' };
+            try { localStorage.setItem('csbs_profile', JSON.stringify(userProfile)); } catch (e) {}
             // Reveal the admin shortcut for admins
             if (data.is_admin) document.getElementById('admin-link')?.classList.remove('hidden');
         }
     } catch (e) { /* fallback to 'there' */ }
+    if (!userProfile.name) {
+        // Offline or auth check raced — last known profile still lets us personalize
+        try { userProfile = JSON.parse(localStorage.getItem('csbs_profile')) || userProfile; } catch (e) {}
+        if (userProfile.name) name = userProfile.name;
+    }
 
     const hour = new Date().getHours();
     let greet = 'Good evening';
@@ -940,6 +1674,26 @@ async function fetchJSON(url) {
     if (res.status === 401) { window.location.href = '/login.html'; throw new Error('Session expired'); }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return res.json();
+}
+
+// Stale-while-revalidate JSON: serve the last copy instantly from
+// localStorage (survives closing the tab — every open paints instantly),
+// refresh it in the background. First visit ever fetches normally.
+const SWR_TTL = 5 * 60 * 1000;        // serve without waiting if newer than 5 min
+const SWR_MAX_STALE = 24 * 60 * 60 * 1000; // still paint with data up to a day old
+async function cachedJSON(url) {
+    const key = `swr_${url}`;
+    let stored = null;
+    try { stored = JSON.parse(localStorage.getItem(key)); } catch (e) { /* corrupt */ }
+    const refresh = fetchJSON(url).then(data => {
+        try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), data })); } catch (e) { /* quota */ }
+        return data;
+    });
+    if (stored && Date.now() - stored.t < SWR_MAX_STALE) {
+        refresh.catch(() => {}); // background refresh; ignore failures, we have data
+        return stored.data;
+    }
+    return refresh;
 }
 
 async function fetchText(url) {
@@ -1178,7 +1932,172 @@ function resetGpaSemester() {
     renderCgpa();
 }
 
-// Refetch on tab focus
+// Refetch on tab focus — but only if we were away a while, so quick
+// app-switches (especially on mobile) don't re-trigger full reloads
+let lastHiddenAt = 0;
 document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) loadSection(currentSection);
+    if (document.hidden) { lastHiddenAt = Date.now(); return; }
+    if (Date.now() - lastHiddenAt > 2 * 60 * 1000) loadSection(currentSection);
 });
+
+// ── PWA: offline support + Add to Home Screen ───
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {});
+    });
+}
+window.addEventListener('offline', () => showToast('You\'re offline — showing saved data', 'info'));
+window.addEventListener('online', () => { showToast('Back online', 'success'); loadSection(currentSection); });
+
+// ── Ambient background dots — drift slowly, shy away from the cursor ──
+// A sparse field of tiny dots behind the content. Each drifts on its own,
+// and gets gently pushed away when the pointer comes near, then eases home.
+(function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    const canvas = document.createElement('canvas');
+    canvas.className = 'bg-dots';
+    canvas.setAttribute('aria-hidden', 'true');
+    document.body.prepend(canvas);
+    const ctx = canvas.getContext('2d');
+
+    let W = 0, H = 0, dots = [];
+    let mx = -9999, my = -9999;          // pointer position (offscreen = inert)
+    const RADIUS = 130;                   // how close the cursor has to get
+
+    function build() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        W = innerWidth; H = innerHeight;
+        canvas.width = W * dpr; canvas.height = H * dpr;
+        canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        // density scales with area, capped so phones stay light
+        const n = Math.min(110, Math.round((W * H) / 11000));
+        dots = Array.from({ length: n }, () => {
+            const hx = Math.random() * W, hy = Math.random() * H;
+            return {
+                hx, hy,                     // home position it eases back to
+                x: hx, y: hy,
+                r: 1 + Math.random() * 1.8, // tiny
+                a: 0.05 + Math.random() * 0.08,
+                ph: Math.random() * Math.PI * 2,           // drift phase
+                sp: 0.0004 + Math.random() * 0.0006        // drift speed
+            };
+        });
+    }
+    build();
+    window.addEventListener('resize', build);
+
+    function ink() {
+        return document.documentElement.getAttribute('data-theme') === 'dark' ? '196,181,253' : '20,20,20';
+    }
+
+    let last = 0;
+    function tick(now) {
+        // ~30fps is plenty for ambience and halves the battery cost
+        if (now - last < 33) { requestAnimationFrame(tick); return; }
+        last = now;
+
+        ctx.clearRect(0, 0, W, H);
+        const rgb = ink();
+        for (const d of dots) {
+            // slow figure-8 drift around home
+            d.ph += d.sp * 33;
+            let gx = d.hx + Math.sin(d.ph) * 14;
+            let gy = d.hy + Math.sin(d.ph * 2) * 9;
+
+            // cursor repulsion — push the goal point away, dot eases after it
+            const dx = gx - mx, dy = gy - my;
+            const dist = Math.hypot(dx, dy);
+            if (dist < RADIUS && dist > 0.01) {
+                const f = (1 - dist / RADIUS) * 46;
+                gx += (dx / dist) * f;
+                gy += (dy / dist) * f;
+            }
+            d.x += (gx - d.x) * 0.06;
+            d.y += (gy - d.y) * 0.06;
+
+            // dots near the cursor glow a touch brighter
+            const near = dist < RADIUS ? (1 - dist / RADIUS) : 0;
+            ctx.beginPath();
+            ctx.arc(d.x, d.y, d.r + near * 0.8, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(${rgb},${(d.a + near * 0.1).toFixed(3)})`;
+            ctx.fill();
+        }
+        requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+
+    window.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; }, { passive: true });
+    document.addEventListener('mouseleave', () => { mx = -9999; my = -9999; });
+    window.addEventListener('touchmove', e => {
+        const t = e.touches[0]; mx = t.clientX; my = t.clientY;
+    }, { passive: true });
+    window.addEventListener('touchend', () => { mx = -9999; my = -9999; }, { passive: true });
+
+    // note: requestAnimationFrame auto-pauses while the tab is hidden,
+    // so the field costs nothing in the background
+})();
+
+// ── Magnetic UI — cards tilt toward the cursor, small controls lean in ──
+// One delegated mousemove does everything: the element under the cursor
+// gets a light 3D tilt (cards) or a magnetic pull (buttons/chips/pills).
+// Desktop only — hover doesn't exist on touch, and phones get the ribbon+dots.
+(function () {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+    const TILT_SEL = '.card, .stat-card, .dash-hero-combined-card, .hero-slot-card, .module-card';
+    const MAG_SEL = '.dash-chip, .filter-pill, .btn-ghost, .priority-item, .sidebar-item, .dash-sem-btn, .retry-btn';
+    let active = null, activeKind = null;
+
+    function reset(el, kind) {
+        if (!el) return;
+        el.style.transform = '';
+        el.style.boxShadow = '';
+        el.style.transition = kind === 'tilt'
+            ? 'transform 0.5s var(--ease-out), box-shadow 0.5s var(--ease-out)'
+            : 'transform 0.35s var(--ease-spring)';
+        // let the element's own CSS transitions take back over afterwards
+        setTimeout(() => { if (el !== active) el.style.transition = ''; }, 500);
+    }
+
+    window.addEventListener('mousemove', e => {
+        const tiltEl = e.target.closest(TILT_SEL);
+        const magEl = !tiltEl && e.target.closest(MAG_SEL);
+        const el = tiltEl || magEl;
+        const kind = tiltEl ? 'tilt' : 'mag';
+
+        if (el !== active) { reset(active, activeKind); active = el; activeKind = el ? kind : null; }
+        if (!el) return;
+
+        const r = el.getBoundingClientRect();
+        // cursor position within the element, -0.5 … 0.5
+        const px = (e.clientX - r.left) / r.width - 0.5;
+        const py = (e.clientY - r.top) / r.height - 0.5;
+
+        el.style.transition = 'transform 0.12s ease-out, box-shadow 0.12s ease-out';
+        if (kind === 'tilt') {
+            // big surfaces: subtle 3D tilt + tiny lift, like the card is looking at you
+            const max = r.width > 500 ? 1.9 : 3.5;      // wide cards tilt less
+            el.style.transform =
+                `perspective(700px) rotateX(${(-py * max).toFixed(2)}deg) rotateY(${(px * max).toFixed(2)}deg) translateY(-3px)`;
+            // cursor = light source: shadow falls away from it, deepest at the
+            // far corner. Hover a corner and the opposite corner grounds the card.
+            const dark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const a = dark ? 0.65 : 0.16;
+            el.style.boxShadow =
+                `${(-px * 26).toFixed(1)}px ${(-py * 26).toFixed(1)}px 34px -6px rgba(0,0,0,${a}), ` +
+                `0 3px 8px rgba(0,0,0,${dark ? 0.4 : 0.07})`;
+        } else {
+            // small controls: slide a few px toward the cursor + gentle pop
+            el.style.transform =
+                `translate(${(px * 7).toFixed(1)}px, ${(py * 7).toFixed(1)}px) scale(1.05)`;
+        }
+    }, { passive: true });
+
+    // snap everything back when the mouse leaves the window
+    document.addEventListener('mouseleave', () => {
+        reset(active, activeKind); active = null; activeKind = null;
+    });
+})();

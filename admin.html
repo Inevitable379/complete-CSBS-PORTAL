@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin · CSBS Portal</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@350;400;500;550;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/components.css">
@@ -189,6 +189,7 @@
                 <button data-view="post" onclick="switchView('post')"><i class="fas fa-pen-nib"></i> Post update</button>
                 <button data-view="manage" onclick="switchView('manage')"><i class="fas fa-list-check"></i> Manage content</button>
                 <button data-view="courses" onclick="switchView('courses')"><i class="fas fa-cubes"></i> Courses &amp; topics</button>
+                <button data-view="schedule" onclick="switchView('schedule')"><i class="fas fa-calendar-week"></i> Schedule</button>
                 <button data-view="users" onclick="switchView('users')"><i class="fas fa-users"></i> Access control</button>
             </nav>
             <div class="a-side-foot">
@@ -301,6 +302,94 @@
                     <div class="a-card"><div id="courseList"><div class="a-empty"><i class="fas fa-spinner fa-spin"></i>Loading…</div></div></div>
                 </section>
 
+                <!-- ===== SCHEDULE ===== -->
+                <section id="view-schedule" class="view">
+                    <div class="lead"><h2>Schedule</h2><p>Manage timetable slots for each semester. Changes are live immediately.</p></div>
+
+                    <!-- Semester Pills -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--sp-3);margin-bottom:var(--sp-4)">
+                        <div class="seg" style="gap:4px">
+                            <button class="sched-sem-pill active" data-sem="1" onclick="loadAdminSchedule(1)">Sem 1</button>
+                            <button class="sched-sem-pill" data-sem="3" onclick="loadAdminSchedule(3)">Sem 3</button>
+                            <button class="sched-sem-pill" data-sem="5" onclick="loadAdminSchedule(5)">Sem 5</button>
+                            <button class="sched-sem-pill" data-sem="7" onclick="loadAdminSchedule(7)">Sem 7</button>
+                        </div>
+                        <button class="btn btn-danger" style="width:auto;padding:var(--sp-2) var(--sp-4);font-size:.82rem" onclick="clearSemSchedule()">
+                            <i class="fas fa-trash"></i> Clear all slots
+                        </button>
+                    </div>
+
+                    <!-- Slot list -->
+                    <div class="a-card" style="margin-bottom:var(--sp-5)">
+                        <div id="sched-slots-list"><div class="a-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div></div>
+                    </div>
+
+                    <!-- Add / Edit Slot Form -->
+                    <div class="a-card">
+                        <div style="font-size:.78rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--sp-4)">
+                            <i class="fas fa-pen"></i> Add / Edit Slot
+                        </div>
+                        <input type="hidden" id="sched-slot-id">
+                        <input type="hidden" id="sched-sem">
+                        <div class="row2">
+                            <div class="field">
+                                <label>Day</label>
+                                <select id="sched-day">
+                                    <option value="">Select day…</option>
+                                    <option>Monday</option><option>Tuesday</option><option>Wednesday</option>
+                                    <option>Thursday</option><option>Friday</option><option>Saturday</option>
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>Time <span class="hint">e.g. 8:50 – 9:40</span></label>
+                                <input id="sched-time" placeholder="8:50 – 9:40">
+                            </div>
+                        </div>
+                        <div class="row2">
+                            <div class="field">
+                                <label>Subject name</label>
+                                <input id="sched-subject" placeholder="e.g. Discrete Mathematics">
+                            </div>
+                            <div class="field">
+                                <label>Subject code <span class="hint">optional</span></label>
+                                <input id="sched-code" placeholder="e.g. DMCS">
+                            </div>
+                        </div>
+                        <div class="row2">
+                            <div class="field">
+                                <label>Faculty / Teacher <span class="hint">optional</span></label>
+                                <input id="sched-faculty" placeholder="e.g. Dr. Priya Sathish - Assistant Professor">
+                            </div>
+                            <div class="field">
+                                <label>Room / Lab <span class="hint">optional</span></label>
+                                <input id="sched-room" placeholder="e.g. Room 201">
+                            </div>
+                        </div>
+                        <div class="row2">
+                            <div class="field">
+                                <label>Slot order <span class="hint">for sorting within the day</span></label>
+                                <input type="number" id="sched-order" value="0" min="0">
+                            </div>
+                        </div>
+                        <div style="display:flex;gap:var(--sp-3);margin-top:var(--sp-2)">
+                            <button class="btn btn-primary" style="width:auto" onclick="saveSlot()"><i class="fas fa-floppy-disk"></i> Save slot</button>
+                            <button class="btn btn-ghost" style="width:auto" onclick="clearSlotForm()"><i class="fas fa-xmark"></i> Clear</button>
+                        </div>
+                    </div>
+
+                    <!-- Bulk Import -->
+                    <div class="a-card" style="margin-top:var(--sp-5)">
+                        <div style="font-size:.78rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:var(--sp-3)">
+                            <i class="fas fa-file-import"></i> Bulk JSON Import <span style="text-transform:none;font-weight:400;color:var(--text-3)">— replaces all slots for the selected semester</span>
+                        </div>
+                        <div style="font-size:.8rem;color:var(--text-3);margin-bottom:var(--sp-3)">
+                            Paste an array like: <code style="background:var(--bg-2);padding:2px 6px;border-radius:4px;font-size:.78rem">[{"day":"Monday","slot_time":"8:50–9:40","slot_order":0,"subject":"Maths","subject_code":"MA","room":"101"}, …]</code>
+                        </div>
+                        <div class="field"><textarea id="sched-bulk" placeholder='Paste JSON array here…' style="min-height:120px;font-family:var(--font-mono);font-size:.8rem"></textarea></div>
+                        <button class="btn btn-primary" style="width:auto" onclick="bulkImport()"><i class="fas fa-file-import"></i> Import</button>
+                    </div>
+                </section>
+
                 <!-- ===== USERS ===== -->
                 <section id="view-users" class="view">
                     <div class="lead"><h2>Access control</h2><p>Manage who can log into the portal. Hardcoded admin emails cannot be removed.</p></div>
@@ -373,7 +462,7 @@
         }
 
         // ── View switching ──
-        const TITLES = { upload:'Upload material', post:'Post update', manage:'Manage content', courses:'Courses & topics', users:'Access control' };
+        const TITLES = { upload:'Upload material', post:'Post update', manage:'Manage content', courses:'Courses & topics', schedule:'Schedule', users:'Access control' };
         function switchView(v){
             document.querySelectorAll('.a-nav button').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
             document.querySelectorAll('.view').forEach(s=>s.classList.remove('active'));
@@ -383,6 +472,7 @@
             if(v==='manage') setManage(currentManage, null);
             if(v==='courses') renderCourseList();
             if(v==='users') loadUsers();
+            if(v==='schedule') loadAdminSchedule();
         }
 
         // ── Upload ──
@@ -662,6 +752,129 @@
 
         // ── Session ──
         function logout(){ fetch('/api/auth/logout', {method:'POST', credentials:'same-origin'}).finally(()=>location.href='/login.html'); }
+
+        // ═══════════════════════════════════════════════════
+        // SCHEDULE MANAGEMENT
+        // ═══════════════════════════════════════════════════
+        const SEMS = [1, 3, 5, 7];
+        let adminSchedSem = 1;
+        let adminSlots = [];  // loaded slots for current sem
+
+        async function loadAdminSchedule(sem) {
+            adminSchedSem = sem || adminSchedSem;
+            // update pills
+            document.querySelectorAll('.sched-sem-pill').forEach(b => {
+                b.classList.toggle('active', parseInt(b.dataset.sem) === adminSchedSem);
+            });
+            const box = $('#sched-slots-list');
+            box.innerHTML = `<div class="a-empty"><i class="fas fa-spinner fa-spin"></i> Loading…</div>`;
+            try {
+                adminSlots = await fetchJSON(`/api/timetable?sem=${adminSchedSem}`);
+                renderAdminSlots();
+            } catch(e) { box.innerHTML = `<div class="a-empty"><i class="fas fa-circle-xmark" style="color:var(--danger)"></i> Failed to load</div>`; toast(e.message, 'err'); }
+        }
+
+        const DAY_ORDER = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+        function renderAdminSlots() {
+            const box = $('#sched-slots-list');
+            if (!adminSlots.length) {
+                box.innerHTML = `<div class="a-empty"><i class="fas fa-calendar-xmark"></i>No slots for Sem ${adminSchedSem} yet. Add one below.</div>`;
+                return;
+            }
+            // Group by day
+            const byDay = {};
+            adminSlots.forEach(s => { if (!byDay[s.day]) byDay[s.day] = []; byDay[s.day].push(s); });
+            const days = DAY_ORDER.filter(d => byDay[d]);
+            box.innerHTML = days.map(day => {
+                const slots = byDay[day].sort((a,b) => a.slot_order - b.slot_order);
+                return `<div style="margin-bottom:var(--sp-4)">
+                    <div class="a-group-label">${day}</div>
+                    <div class="a-list">${slots.map(s => `
+                        <div class="a-item" id="slot-row-${s.id}">
+                            <div class="txt">
+                                <b>${esc(s.subject)}${s.subject_code ? ` <span style="font-weight:400;color:var(--text-3);font-size:.78rem">[${esc(s.subject_code)}]</span>` : ''}</b>
+                                <span>${esc(s.slot_time)}${s.room ? ` · <i class="fas fa-location-dot"></i> ${esc(s.room)}` : ''}</span>
+                            </div>
+                            <button class="btn" style="padding:var(--sp-2) var(--sp-3);font-size:.8rem" onclick="editSlot(${s.id})"><i class="fas fa-pen"></i></button>
+                            <button class="btn btn-danger" style="padding:var(--sp-2) var(--sp-3)" onclick="delSlot(${s.id})"><i class="fas fa-trash"></i></button>
+                        </div>`).join('')}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function editSlot(id) {
+            const slot = adminSlots.find(s => s.id === id);
+            if (!slot) return;
+            $('#sched-slot-id').value = slot.id;
+            $('#sched-sem').value = slot.semester;
+            $('#sched-day').value = slot.day;
+            $('#sched-time').value = slot.slot_time;
+            $('#sched-order').value = slot.slot_order;
+            $('#sched-subject').value = slot.subject;
+            $('#sched-code').value = slot.subject_code || '';
+            $('#sched-faculty').value = slot.faculty || '';
+            $('#sched-room').value = slot.room || '';
+            $('#sched-slot-id').closest('.a-card').scrollIntoView({behavior:'smooth', block:'start'});
+            $('#sched-subject').focus();
+        }
+
+        function clearSlotForm() {
+            ['sched-slot-id','sched-day','sched-time','sched-subject','sched-code','sched-faculty','sched-room'].forEach(id => { const el = $('#'+id); if(el) el.value = ''; });
+            $('#sched-order').value = '0';
+            $('#sched-sem').value = adminSchedSem;
+        }
+
+        async function saveSlot() {
+            const payload = {
+                id: parseInt($('#sched-slot-id').value) || null,
+                semester: parseInt($('#sched-sem').value) || adminSchedSem,
+                day: $('#sched-day').value.trim(),
+                slot_time: $('#sched-time').value.trim(),
+                slot_order: parseInt($('#sched-order').value) || 0,
+                subject: $('#sched-subject').value.trim(),
+                subject_code: $('#sched-code').value.trim(),
+                faculty: $('#sched-faculty').value.trim(),
+                room: $('#sched-room').value.trim()
+            };
+            if (!payload.day || !payload.subject || !payload.slot_time) { toast('Day, time, and subject are required', 'err'); return; }
+            try {
+                await fetchJSON('/api/timetable/slot', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+                toast(payload.id ? 'Slot updated ✓' : 'Slot added ✓');
+                clearSlotForm();
+                loadAdminSchedule();
+            } catch(e) { toast(e.message, 'err'); }
+        }
+
+        async function delSlot(id) {
+            if (!await confirmDialog('Delete this time slot?')) return;
+            try {
+                await fetchJSON(`/api/timetable/slot/${id}`, { method:'DELETE' });
+                toast('Slot deleted'); loadAdminSchedule();
+            } catch(e) { toast(e.message, 'err'); }
+        }
+
+        async function clearSemSchedule() {
+            if (!await confirmDialog(`This will DELETE all slots for Semester ${adminSchedSem}. Are you sure?`, 'Clear Semester')) return;
+            try {
+                await fetchJSON(`/api/timetable/semester/${adminSchedSem}`, { method:'DELETE' });
+                toast(`Sem ${adminSchedSem} cleared`); loadAdminSchedule();
+            } catch(e) { toast(e.message, 'err'); }
+        }
+
+        async function bulkImport() {
+            const raw = $('#sched-bulk').value.trim();
+            if (!raw) { toast('Paste JSON first', 'err'); return; }
+            let slots;
+            try { slots = JSON.parse(raw); } catch(e) { toast('Invalid JSON: ' + e.message, 'err'); return; }
+            if (!Array.isArray(slots)) { toast('JSON must be an array of slot objects', 'err'); return; }
+            if (!await confirmDialog(`Import ${slots.length} slots for Semester ${adminSchedSem}? This will REPLACE all existing slots for this semester.`, 'Bulk Import')) return;
+            try {
+                const res = await fetchJSON('/api/timetable/bulk', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({semester: adminSchedSem, slots}) });
+                toast(`Imported ${res.imported} slots ✓`); $('#sched-bulk').value = ''; loadAdminSchedule();
+            } catch(e) { toast(e.message, 'err'); }
+        }
     </script>
 </body>
 </html>

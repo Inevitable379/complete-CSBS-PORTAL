@@ -85,7 +85,26 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             email TEXT UNIQUE NOT NULL
         );
+
+        CREATE TABLE IF NOT EXISTS timetable (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            semester INTEGER NOT NULL,
+            day TEXT NOT NULL,
+            slot_order INTEGER NOT NULL DEFAULT 0,
+            slot_time TEXT NOT NULL DEFAULT '',
+            subject TEXT NOT NULL DEFAULT '',
+            subject_code TEXT DEFAULT '',
+            faculty TEXT DEFAULT '',
+            room TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
     ''')
+    # --- Migrations: add columns to existing DBs if missing ---
+    try:
+        conn.execute("ALTER TABLE timetable ADD COLUMN faculty TEXT DEFAULT ''")
+        conn.commit()
+    except Exception:
+        pass  # column already exists
     conn.commit()
     conn.close()
 
@@ -330,3 +349,89 @@ def get_course_by_id(course_id):
     row = conn.execute("SELECT * FROM courses WHERE id = ?", (course_id,)).fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+# ---------------------------------------------------------------------------
+# Timetable CRUD
+# ---------------------------------------------------------------------------
+
+DAY_ORDER = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
+
+def get_timetable(semester):
+    """Return the full timetable for a semester as a list of slot dicts,
+    ordered by day then slot_order."""
+    conn = get_db()
+    rows = _rows_to_dicts(
+        conn.execute(
+            """SELECT id, semester, day, slot_order, slot_time, subject, subject_code, faculty, room
+               FROM timetable
+               WHERE semester = ?
+               ORDER BY CASE day
+                   WHEN 'Monday' THEN 1 WHEN 'Tuesday' THEN 2 WHEN 'Wednesday' THEN 3
+                   WHEN 'Thursday' THEN 4 WHEN 'Friday' THEN 5 WHEN 'Saturday' THEN 6
+                   ELSE 7 END, slot_order""",
+            (int(semester),)
+        ).fetchall()
+    )
+    conn.close()
+    return rows
+
+
+def get_timetable_semesters():
+    """Return sorted list of semester numbers that have at least one timetable slot."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT DISTINCT semester FROM timetable ORDER BY semester"
+    ).fetchall()
+    conn.close()
+    return [r['semester'] for r in rows]
+
+
+def upsert_timetable_slot(semester, day, slot_time, slot_order, subject,
+                          subject_code='', faculty='', room='', slot_id=None):
+    """Insert a new slot or update an existing one (by slot_id).
+    Returns the id of the affected row."""
+    conn = get_db()
+    try:
+        if slot_id:
+            conn.execute(
+                """UPDATE timetable
+                   SET semester=?, day=?, slot_time=?, slot_order=?,
+                       subject=?, subject_code=?, faculty=?, room=?
+                   WHERE id=?""",
+                (int(semester), day, slot_time, int(slot_order),
+                 subject, subject_code or '', faculty or '', room or '', int(slot_id))
+            )
+            conn.commit()
+            return int(slot_id)
+        else:
+            cursor = conn.execute(
+                """INSERT INTO timetable
+                       (semester, day, slot_time, slot_order, subject, subject_code, faculty, room)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (int(semester), day, slot_time, int(slot_order),
+                 subject, subject_code or '', faculty or '', room or '')
+            )
+            conn.commit()
+            return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def delete_timetable_slot(slot_id):
+    """Delete a single timetable slot by id."""
+    conn = get_db()
+    conn.execute("DELETE FROM timetable WHERE id = ?", (int(slot_id),))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def clear_timetable_semester(semester):
+    """Remove ALL timetable entries for a given semester."""
+    conn = get_db()
+    conn.execute("DELETE FROM timetable WHERE semester = ?", (int(semester),))
+    conn.commit()
+    conn.close()
+    return True

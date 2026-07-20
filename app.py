@@ -13,7 +13,9 @@ from database import (
     get_all, add_item, delete_item, get_count,
     get_whitelisted_emails, add_course, delete_course,
     add_topic, delete_topic, get_all_materials, unlink_material,
-    rename_topic, add_whitelisted_email, remove_whitelisted_email
+    rename_topic, add_whitelisted_email, remove_whitelisted_email,
+    get_timetable, get_timetable_semesters, upsert_timetable_slot,
+    delete_timetable_slot, clear_timetable_semester
 )
 from auth import verify_google_token, login_required, admin_required
 
@@ -47,26 +49,41 @@ def create_app():
     # Page routes
     # -----------------------------------------------------------------------
 
+    def _page(fname):
+        """Serve an HTML page with ETag revalidation (304 on repeat visits)."""
+        resp = send_from_directory(Config.BASE_DIR, fname)
+        resp.cache_control.no_cache = True  # always revalidate, but a 304 is ~0 bytes
+        resp.add_etag()
+        resp.make_conditional(request)
+        return resp
+
     @app.route('/')
     def home():
-        return send_from_directory(Config.BASE_DIR, 'index.html')
+        return _page('index.html')
 
     @app.route('/login.html')
     def login_page():
-        return send_from_directory(Config.BASE_DIR, 'login.html')
+        return _page('login.html')
 
     @app.route('/admin')
     def admin_page():
         if not session.get('is_admin'):
             return redirect('/login.html')
-        return send_from_directory(Config.BASE_DIR, 'admin.html')
+        return _page('admin.html')
 
     @app.route('/ether')
     def ether_page():
         """ETHER — immersive 3D mode (desktop). Same data, different universe."""
         if 'user_email' not in session:
             return redirect('/login.html')
-        return send_from_directory(Config.BASE_DIR, 'ether.html')
+        return _page('ether.html')
+
+    @app.route('/sw.js')
+    def service_worker():
+        # Served from root so the worker's scope covers the whole app.
+        resp = send_from_directory(os.path.join(Config.BASE_DIR, 'static'), 'sw.js')
+        resp.cache_control.no_cache = True  # browsers must always check for SW updates
+        return resp
 
     # -----------------------------------------------------------------------
     # Auth routes
@@ -213,21 +230,36 @@ def create_app():
     @app.route('/api/sheets/<name>')
     @login_required
     def api_sheets(name):
-        urls = {
-            'schedule': Config.SCHEDULE_CSV_URL,
-            'attendance': Config.ATTENDANCE_CSV_URL,
-        }
-        if name not in urls:
+        if name == 'schedule':
+            # Multi-semester: /api/sheets/schedule?sem=3
+            sched = Config.schedule_map()
+            default_sem = sorted(sched.keys())[0]
+            try:
+                sem = int(request.args.get('sem', default_sem))
+            except ValueError:
+                return jsonify({"error": "Invalid semester"}), 400
+            if sem not in sched:
+                return jsonify({"error": f"No timetable published for Semester {sem}"}), 404
+            cache_key, url = f'schedule_sem{sem}', sched[sem]
+        elif name == 'attendance':
+            cache_key, url = 'attendance', Config.ATTENDANCE_CSV_URL
+        else:
             return jsonify({"error": "Unknown sheet"}), 404
         try:
-            csv_text = _fetch_sheet(name, urls[name])
+            csv_text = _fetch_sheet(cache_key, url)
             return csv_text, 200, {'Content-Type': 'text/csv; charset=utf-8'}
         except Exception:
             # Serve stale cache if Google is unreachable
-            cached = _sheet_cache.get(name)
+            cached = _sheet_cache.get(cache_key)
             if cached:
                 return cached[1], 200, {'Content-Type': 'text/csv; charset=utf-8'}
             return jsonify({"error": "Sheet temporarily unavailable"}), 502
+
+    @app.route('/api/sheets/schedule/semesters')
+    @login_required
+    def api_schedule_semesters():
+        """Sorted list of semester numbers that have timetable data in the DB."""
+        return jsonify(get_timetable_semesters())
 
     # -----------------------------------------------------------------------
     # Admin write routes (require admin session)
@@ -438,6 +470,90 @@ def create_app():
         return jsonify({"success": True})
 
     # -----------------------------------------------------------------------
+    # Timetable API (DB-backed, replaces Google Sheets for timetable)
+    # -----------------------------------------------------------------------
+
+    @app.route('/api/timetable')
+    @login_required
+    def api_get_timetable():
+        """GET /api/timetable?sem=1 — return all slots for a semester."""
+        try:
+            sem = int(request.args.get('sem', 1))
+        except ValueError:
+            return jsonify({"error": "Invalid semester"}), 400
+        slots = get_timetable(sem)
+        return jsonify(slots)
+
+    @app.route('/api/timetable/semesters')
+    @login_required
+    def api_timetable_semesters():
+        """GET /api/timetable/semesters — list of semesters that have data."""
+        return jsonify(get_timetable_semesters())
+
+    @app.route('/api/timetable/slot', methods=['POST'])
+    @admin_required
+    def api_upsert_slot():
+        """POST /api/timetable/slot — add or update a timetable slot.
+        Body (JSON): semester, day, slot_time, slot_order, subject,
+                     subject_code (opt), room (opt), id (opt — if editing)."""
+        data = request.get_json(force=True)
+        required = ('semester', 'day', 'slot_time', 'slot_order', 'subject')
+        if not all(data.get(k) is not None for k in required):
+            return jsonify({"error": f"Missing required fields: {required}"}), 400
+        new_id = upsert_timetable_slot(
+            semester=data['semester'],
+            day=data['day'],
+            slot_time=data['slot_time'],
+            slot_order=data['slot_order'],
+            subject=data['subject'],
+            subject_code=data.get('subject_code', ''),
+            faculty=data.get('faculty', ''),
+            room=data.get('room', ''),
+            slot_id=data.get('id')
+        )
+        return jsonify({"success": True, "id": new_id})
+
+    @app.route('/api/timetable/slot/<int:slot_id>', methods=['DELETE'])
+    @admin_required
+    def api_delete_slot(slot_id):
+        """DELETE /api/timetable/slot/<id> — remove a single slot."""
+        delete_timetable_slot(slot_id)
+        return jsonify({"success": True})
+
+    @app.route('/api/timetable/bulk', methods=['POST'])
+    @admin_required
+    def api_bulk_import():
+        """POST /api/timetable/bulk — bulk import slots for a semester.
+        Body (JSON): { semester: int, slots: [{day, slot_time, slot_order,
+                       subject, subject_code?, room?}, ...] }
+        Clears existing data for that semester first."""
+        data = request.get_json(force=True)
+        sem = data.get('semester')
+        slots = data.get('slots', [])
+        if not sem or not isinstance(slots, list):
+            return jsonify({"error": "semester and slots[] required"}), 400
+        clear_timetable_semester(sem)
+        for i, slot in enumerate(slots):
+            upsert_timetable_slot(
+                semester=sem,
+                day=slot.get('day', ''),
+                slot_time=slot.get('slot_time', ''),
+                slot_order=slot.get('slot_order', i),
+                subject=slot.get('subject', ''),
+                subject_code=slot.get('subject_code', ''),
+                faculty=slot.get('faculty', ''),
+                room=slot.get('room', '')
+            )
+        return jsonify({"success": True, "imported": len(slots)})
+
+    @app.route('/api/timetable/semester/<int:sem>', methods=['DELETE'])
+    @admin_required
+    def api_clear_semester(sem):
+        """DELETE /api/timetable/semester/<sem> — wipe all slots for a semester."""
+        clear_timetable_semester(sem)
+        return jsonify({"success": True})
+
+    # -----------------------------------------------------------------------
     # Static file serving
     # -----------------------------------------------------------------------
 
@@ -447,7 +563,15 @@ def create_app():
         # CSS/JS/fonts stay public so the login page can render.
         if filename.startswith('uploads/') and 'user_email' not in session:
             return jsonify({"error": "Unauthorized"}), 401
-        return send_from_directory(os.path.join(Config.BASE_DIR, 'static'), filename)
+        resp = send_from_directory(os.path.join(Config.BASE_DIR, 'static'), filename)
+        # Let browsers reuse CSS/JS for 5 min without asking, then revalidate
+        # cheaply (304 via ETag) — cuts repeat-visit payload to near zero.
+        if not filename.startswith('uploads/'):
+            resp.cache_control.public = True
+            resp.cache_control.max_age = 3600
+            resp.add_etag()
+            resp.make_conditional(request)
+        return resp
 
     # -----------------------------------------------------------------------
     # Error handlers
@@ -464,5 +588,43 @@ def create_app():
     @app.errorhandler(413)
     def too_large(e):
         return jsonify({"error": f"File too large. Maximum size is {Config.MAX_UPLOAD_MB} MB."}), 413
+
+    # -----------------------------------------------------------------------
+    # Gzip compression — main.js goes 77 KB → ~19 KB on the wire.
+    # Compressed copies are cached in memory so repeat hits cost nothing.
+    # -----------------------------------------------------------------------
+
+    import gzip as _gzip
+    _gz_cache = {}  # (path, etag) -> compressed bytes
+    _GZ_TYPES = ('text/', 'application/json', 'application/javascript', 'image/svg')
+
+    @app.after_request
+    def compress_response(resp):
+        accept = request.headers.get('Accept-Encoding', '')
+        if ('gzip' not in accept.lower()
+                or resp.status_code != 200
+                or resp.headers.get('Content-Encoding')):
+            return resp
+        ctype = resp.headers.get('Content-Type', '')
+        if not any(ctype.startswith(t) for t in _GZ_TYPES):
+            return resp
+        try:
+            key = (request.path, resp.headers.get('ETag', ''))
+            gz = _gz_cache.get(key) if key[1] else None
+            if gz is None:
+                resp.direct_passthrough = False  # static files stream by default
+                data = resp.get_data()
+                if len(data) < 500:
+                    return resp
+                gz = _gzip.compress(data, 6)
+                if key[1] and len(_gz_cache) < 128:
+                    _gz_cache[key] = gz
+            resp.set_data(gz)
+            resp.headers['Content-Encoding'] = 'gzip'
+            resp.headers['Content-Length'] = len(gz)
+            resp.headers.add('Vary', 'Accept-Encoding')
+        except Exception:
+            pass  # never let compression break a response
+        return resp
 
     return app

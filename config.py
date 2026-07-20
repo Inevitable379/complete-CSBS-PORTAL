@@ -28,10 +28,28 @@ class Config:
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
 
     # --- Google Sheets (published CSV) sources, proxied via /api/sheets/* ---
+    # Multi-semester timetables: one env var per semester, each pointing to a
+    # "Publish to web" CSV link for that semester's tab in the Google Sheet.
+    #   SCHEDULE_CSV_SEM_1=https://docs.google.com/.../pub?gid=111&single=true&output=csv
+    #   SCHEDULE_CSV_SEM_3=...
+    # Falls back to the legacy SCHEDULE_CSV_URL (as Sem 3) when none are set,
+    # so existing deployments keep working unchanged.
     SCHEDULE_CSV_URL = os.getenv(
         'SCHEDULE_CSV_URL',
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vQelGRJbrqerJsUMeScuBiSMhJOGlyFb0E3IUjjxpnFbhOg0MtO_0dlzxSMjNlHOImmPLSHYqcjsJEe/pub?gid=0&single=true&output=csv'
     )
+
+    @classmethod
+    def schedule_map(cls):
+        """Return {semester_number: csv_url} from SCHEDULE_CSV_SEM_* env vars."""
+        sched = {}
+        for key, val in os.environ.items():
+            if key.startswith('SCHEDULE_CSV_SEM_') and val.strip():
+                try:
+                    sched[int(key.rsplit('_', 1)[1])] = val.strip()
+                except ValueError:
+                    pass
+        return sched or {3: cls.SCHEDULE_CSV_URL}
     ATTENDANCE_CSV_URL = os.getenv(
         'ATTENDANCE_CSV_URL',
         'https://docs.google.com/spreadsheets/d/e/2PACX-1vQelGRJbrqerJsUMeScuBiSMhJOGlyFb0E3IUjjxpnFbhOg0MtO_0dlzxSMjNlHOImmPLSHYqcjsJEe/pub?gid=1674592517&single=true&output=csv'

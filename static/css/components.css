@@ -9,6 +9,8 @@
     height: 100vh;
     width: 100%;
     overflow: hidden;
+    position: relative;
+    z-index: 1; /* keeps content above the ambient .bg-dots canvas */
 }
 
 /* ── Sidebar ─────────────────────────────────────────────── */
@@ -494,10 +496,92 @@
 .table tr:hover td { background: var(--bg-1); }
 
 /* Timetable special cells */
-.day-header { font-weight: 600; background: var(--bg-1) !important; }
-.break-cell { color: var(--text-3); font-style: italic; }
-.lunch-cell { color: var(--text-3); font-style: italic; }
+.day-header { font-weight: 600; background: var(--bg-1) !important; white-space: nowrap; }
+.break-cell { color: var(--text-3); font-style: italic; text-align: center; }
+.lunch-cell { color: var(--text-3); font-style: italic; text-align: center; white-space: nowrap; }
 .subject-cell { font-weight: 500; }
+.free-cell { color: var(--text-3); text-align: center; }
+
+/* ── Rich timetable cells + tooltips ─────────────────────── */
+.timetable td { vertical-align: top; }
+
+.tt-cell { position: relative; cursor: pointer; min-width: 120px; }
+.tt-cell:hover, .tt-cell:focus-visible { background: var(--accent-muted) !important; }
+.tt-cell.lab-cell { box-shadow: inset 3px 0 0 var(--accent); }
+
+.tt-name { font-weight: 600; font-size: 0.8rem; line-height: 1.25; }
+
+.tt-room {
+    margin-top: 3px;
+    font-size: 0.7rem;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.tt-room i { font-size: 0.65rem; }
+
+.tt-badge {
+    font-size: 0.6rem;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 999px;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    letter-spacing: 0.03em;
+}
+.tt-badge-lab {
+    background: var(--accent-muted);
+    color: var(--accent);
+    border-color: transparent;
+}
+
+/* Tooltip / popover */
+.tt-pop {
+    display: none;
+    position: absolute;
+    z-index: 50;
+    left: 50%;
+    top: calc(100% - 4px);
+    transform: translateX(-50%);
+    min-width: 220px;
+    max-width: 300px;
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    padding: var(--sp-3) var(--sp-4);
+    text-align: left;
+    white-space: normal;
+    pointer-events: none;
+}
+.tt-cell:hover .tt-pop,
+.tt-cell:focus-visible .tt-pop,
+.tt-cell.tt-open .tt-pop { display: block; }
+
+/* Flip the tooltip up for rows near the bottom */
+.timetable tbody tr:nth-last-child(-n+2) .tt-pop { top: auto; bottom: calc(100% - 4px); }
+
+.tt-pop-title { font-weight: 600; font-size: 0.85rem; margin-bottom: var(--sp-2); }
+.tt-pop-row {
+    font-size: 0.75rem;
+    color: var(--text-2);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 0;
+}
+.tt-pop-row i { width: 14px; text-align: center; color: var(--text-3); font-size: 0.7rem; }
+
+.timeline-room {
+    font-size: 0.72rem;
+    color: var(--text-3);
+    font-family: var(--font-mono);
+    margin-left: 6px;
+}
 
 /* ── Timeline ────────────────────────────────────────────── */
 .timeline {
@@ -1117,4 +1201,1104 @@
     .gpa-row-input { grid-area: input; justify-content: space-between; }
     .gpa-cgpa-value { font-size: 2.2rem; }
     .gpa-cgpa-breakdown { justify-content: flex-start; }
+}
+
+/* ═══════════════════════════════════════════════════════
+   DB-Backed Timetable Card Layout
+   ═══════════════════════════════════════════════════════ */
+
+#tt-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-4);
+}
+
+.tt-day-card {
+    border: 1px solid var(--border);
+    border-radius: var(--r-lg);
+    overflow: hidden;
+    background: var(--bg-0);
+    transition: box-shadow var(--dur-fast);
+}
+
+.tt-day-card.tt-today {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent);
+}
+
+.tt-day-header {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    padding: var(--sp-3) var(--sp-5);
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 0.88rem;
+}
+
+.tt-today .tt-day-header {
+    background: var(--accent);
+    color: var(--bg-0);
+    border-bottom-color: var(--accent);
+}
+
+.tt-today .tt-day-header .badge { background: rgba(255,255,255,0.2); color: #fff; }
+
+.tt-day-count {
+    margin-left: auto;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-3);
+}
+
+.tt-today .tt-day-count { color: rgba(255,255,255,0.7); }
+
+.tt-slots {
+    display: flex;
+    flex-direction: column;
+}
+
+.tt-slot {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    padding: var(--sp-3) var(--sp-5);
+    border-bottom: 1px solid var(--border);
+    transition: background var(--dur-instant);
+    min-height: 52px;
+}
+
+.tt-slot:last-child { border-bottom: none; }
+.tt-slot:hover { background: var(--bg-1); }
+
+.tt-slot.tt-now {
+    background: color-mix(in srgb, var(--accent) 6%, transparent);
+    border-left: 3px solid var(--accent);
+}
+
+.tt-slot.tt-break, .tt-slot.tt-free {
+    background: var(--bg-1);
+    opacity: 0.7;
+}
+
+.tt-time {
+    font-size: 0.72rem;
+    font-family: var(--font-mono);
+    color: var(--text-3);
+    white-space: nowrap;
+    min-width: 100px;
+    flex-shrink: 0;
+}
+
+.tt-slot.tt-now .tt-time { color: var(--accent); font-weight: 600; }
+
+.tt-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.tt-slot .tt-name {
+    font-weight: 600;
+    font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tt-slot .tt-code {
+    font-size: 0.7rem;
+    font-family: var(--font-mono);
+    color: var(--text-3);
+    margin-right: var(--sp-2);
+}
+
+.tt-slot .tt-room {
+    font-size: 0.72rem;
+    color: var(--text-3);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.tt-subj {
+    flex: 1;
+    font-size: 0.84rem;
+    color: var(--text-2);
+}
+
+.tt-now-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+@media (max-width: 560px) {
+    .tt-time { min-width: 80px; font-size: 0.68rem; }
+    .tt-slot .tt-name { font-size: 0.82rem; }
+    .tt-slot { padding: var(--sp-2) var(--sp-3); gap: var(--sp-2); }
+    .tt-day-header { padding: var(--sp-2) var(--sp-3); }
+}
+
+/* Lab slot indicator */
+.tt-slot.tt-lab {
+    border-left: 3px solid var(--accent);
+}
+.tt-slot.tt-lab .tt-name::after {
+    content: ' Lab';
+    font-size: 0.65rem;
+    font-weight: 700;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-left: 5px;
+    opacity: 0.8;
+}
+
+/* Clickable slots */
+.tt-slot[onclick] { cursor: pointer; }
+.tt-slot[onclick]:hover { background: var(--bg-1); }
+
+/* Chevron info icon */
+.tt-info-icon {
+    color: var(--text-3);
+    font-size: 0.7rem;
+    flex-shrink: 0;
+    margin-left: auto;
+    padding-left: var(--sp-2);
+    transition: transform var(--dur-instant);
+}
+
+/* Faculty detail panel (hidden by default, expands on click) */
+.tt-detail {
+    display: none;
+    margin-top: var(--sp-2);
+    padding: var(--sp-2) var(--sp-3);
+    background: var(--bg-2);
+    border-radius: var(--r-sm);
+    border-left: 2px solid var(--accent);
+}
+.tt-detail.tt-detail-open { display: block; }
+.tt-detail-row {
+    font-size: 0.76rem;
+    color: var(--text-2);
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: 2px 0;
+}
+.tt-detail-row i { color: var(--accent); width: 12px; }
+
+/* ============================================================
+   DASHBOARD SCHEDULE-FIRST LAYOUT
+   ============================================================ */
+
+/* Greeting + semester picker row */
+.dash-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-2);
+    flex-wrap: wrap;
+}
+
+/* Semester picker dropdown */
+.dash-sem-picker { position: relative; }
+.dash-sem-btn {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-2) var(--sp-4);
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-1);
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--dur-instant);
+    white-space: nowrap;
+}
+.dash-sem-btn:hover { background: var(--bg-2); border-color: var(--accent); }
+.dash-sem-btn i:first-child { color: var(--accent); font-size: 0.9rem; }
+.dash-sem-arrow { font-size: 0.65rem; color: var(--text-3); transition: transform var(--dur-instant); }
+.dash-sem-picker.open .dash-sem-arrow { transform: rotate(180deg); }
+
+.dash-sem-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    box-shadow: var(--shadow-lg);
+    min-width: 140px;
+    z-index: 50;
+    overflow: hidden;
+}
+.dash-sem-picker.open .dash-sem-menu { display: block; }
+.dash-sem-option {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-2);
+    padding: var(--sp-3) var(--sp-4);
+    font-size: 0.82rem;
+    color: var(--text-1);
+    cursor: pointer;
+    transition: background var(--dur-instant);
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+}
+.dash-sem-option:hover { background: var(--bg-1); }
+.dash-sem-option.active { color: var(--accent); font-weight: 600; background: var(--accent-muted); }
+.dash-sem-option i { width: 16px; text-align: center; }
+
+/* ── Hero cards (Live Now / Up Next) ── */
+#dash-hero-cards {
+    display: flex;
+    gap: var(--sp-4);
+    margin-bottom: var(--sp-5);
+    flex-wrap: wrap;
+}
+#dash-hero-cards:empty { display: none; margin: 0; }
+
+.dash-live-card,
+.dash-next-card {
+    flex: 1;
+    min-width: 260px;
+    padding: var(--sp-4) var(--sp-5);
+    border-radius: var(--r-lg);
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform var(--dur-instant), border-color var(--dur-instant);
+}
+.dash-live-card:hover,
+.dash-next-card:hover { transform: translateY(-1px); border-color: var(--accent); }
+
+/* Live Now card — accent border + glow */
+.dash-live-card {
+    border-color: var(--accent);
+    background: linear-gradient(135deg, var(--accent-muted) 0%, var(--bg-0) 60%);
+}
+.dash-live-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 4px;
+    background: var(--accent);
+}
+
+/* Up Next card — subtle violet edge; hero-sized when no live class */
+.dash-next-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 4px;
+    background: var(--violet);
+    opacity: 0.6;
+}
+.dash-next-card.dash-next-hero { padding: var(--sp-5) var(--sp-6); }
+.dash-next-card.dash-next-hero .dash-hero-subject { font-size: 1.1rem; }
+
+.dash-hero-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--accent);
+}
+.dash-hero-tag.next { color: var(--text-3); }
+.dash-hero-tag.next i { color: var(--violet); }
+.dash-hero-subject {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.dash-hero-time {
+    font-size: 0.78rem;
+    color: var(--text-2);
+    font-family: var(--font-mono);
+}
+.dash-hero-time strong { color: var(--accent); font-weight: 600; }
+.dash-next-card .dash-hero-time strong { color: var(--violet); }
+.dash-hero-faculty {
+    font-size: 0.74rem;
+    color: var(--text-3);
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.dash-hero-faculty i { font-size: 0.65rem; }
+
+/* Pulsing live dot */
+.live-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulseDot 1.5s ease-in-out infinite;
+}
+@keyframes pulseDot {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 var(--accent); }
+    50% { opacity: 0.7; box-shadow: 0 0 0 6px transparent; }
+}
+
+/* Finished slots in today's timeline fade back */
+.timeline-slot.past { opacity: 0.45; }
+.timeline-slot.past .subject { text-decoration: line-through; text-decoration-color: var(--text-3); }
+
+/* Flash highlight when jumping from a class to its course card */
+.course-flash {
+    animation: courseFlash 2.4s var(--ease-out);
+}
+@keyframes courseFlash {
+    0%, 35% { box-shadow: 0 0 0 2px var(--accent); }
+    100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* Subject Allocation & Faculty dropdown button */
+.dash-info-dropdown-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: var(--sp-3) var(--sp-4);
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    color: var(--text-1);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all var(--dur-instant);
+}
+.dash-info-dropdown-btn:hover { border-color: var(--accent); background: var(--bg-1); }
+.dash-info-dropdown-content {
+    margin-top: var(--sp-2);
+    border: 1px solid var(--border);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    background: var(--bg-0);
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+    .dash-top { flex-direction: column; gap: var(--sp-3); }
+    #dash-hero-cards { flex-direction: column; }
+    .dash-live-card, .dash-next-card { min-width: 0; }
+    .dash-hero-subject { white-space: normal; }
+    .dash-week-time { min-width: 52px; font-size: 0.68rem; }
+}
+
+/* ============================================================
+   DASHBOARD TIMELINE & CHIPS
+   ============================================================ */
+
+/* Dashboard Hero Combined */
+.dash-hero-combined-card {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    background: var(--bg-0);
+    padding: 24px;
+    border-radius: 24px;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+    transition: transform 0.2s;
+}
+@media(min-width: 768px) {
+    .dash-hero-combined-card {
+        flex-direction: row;
+        align-items: stretch;
+    }
+}
+.dash-hero-combined-card:hover {
+    border-color: var(--text-3);
+    transform: translateY(-2px);
+}
+
+.dash-hero-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 4px 0;
+}
+@media(min-width: 768px) {
+    .dash-hero-divider {
+        height: auto;
+        width: 1px;
+        margin: 0 8px;
+    }
+}
+
+.dash-grid-table-container {
+    overflow-x: auto;
+    margin-bottom: 24px;
+    background: var(--bg-0);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+}
+.dash-grid-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    text-align: center;
+    min-width: 900px;
+}
+.dash-grid-table th, .dash-grid-table td {
+    border: 1px solid var(--border);
+    padding: 12px 8px;
+    height: 70px;
+    vertical-align: middle;
+    transition: background 0.2s;
+}
+.dash-grid-table th:first-child, .dash-grid-table td:first-child { border-left: none; }
+.dash-grid-table th:last-child, .dash-grid-table td:last-child { border-right: none; }
+.dash-grid-table tr:first-child th { border-top: none; }
+.dash-grid-table tr:last-child td { border-bottom: none; }
+
+.dash-grid-table th {
+    background: var(--bg-0);
+    font-weight: 700;
+    color: var(--text-2);
+}
+.dash-grid-table td {
+    color: var(--text-1);
+}
+.dash-grid-table .slot-regular {
+    background: var(--bg-0);
+    color: var(--text-1);
+    font-weight: 600;
+}
+.dash-grid-table .slot-regular:hover {
+    background: var(--bg-1);
+}
+.dash-grid-table .slot-lunch {
+    background: var(--bg-0);
+    color: var(--success);
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+.dash-grid-table .slot-pink {
+    background: var(--bg-0);
+    color: var(--danger);
+    font-weight: 600;
+}
+
+.dash-alloc-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+    text-align: left;
+}
+.dash-alloc-table th, .dash-alloc-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+}
+.dash-alloc-table th {
+    background: var(--bg-1);
+    font-weight: 700;
+    color: var(--text-2);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+}
+.dash-alloc-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Dashboard Timeline & Chips */
+.dash-strip {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 4px;
+}
+.dash-strip::-webkit-scrollbar { display: none; }
+
+.dash-chip {
+    flex: 0 0 auto;
+    min-width: 180px;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+}
+.dash-chip:hover {
+    border-color: var(--text-3);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+}
+.dash-chip.live {
+    background: var(--bg-0);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-muted), var(--shadow-sm);
+}
+.dash-chip.past {
+    opacity: 0.6;
+}
+
+/* Week Accordion */
+.dash-week-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+}
+.dash-week-tabs::-webkit-scrollbar { display: none; }
+
+.dash-week-tab {
+    padding: 8px 16px;
+    border-radius: 99px;
+    border: 1px solid var(--border);
+    background: var(--bg-1);
+    color: var(--text-2);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+.dash-week-tab:hover {
+    background: var(--bg-2);
+    color: var(--text-1);
+}
+.dash-week-tab.active {
+    background: var(--accent);
+    color: var(--bg-0);
+    border-color: var(--accent);
+}
+
+.dash-section-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-1);
+    display: flex;
+    align-items: center;
+}
+
+/* ============================================================
+   Schedule → Timetable tab + UI polish pass
+   ============================================================ */
+
+/* ── Timetable tab ── */
+.tt-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-4);
+}
+
+.tt-legend {
+    display: flex;
+    align-items: center;
+    gap: var(--sp-4);
+    font-size: 0.75rem;
+    color: var(--text-2);
+}
+.tt-legend > span { display: inline-flex; align-items: center; gap: 6px; }
+.tt-legend-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.tt-grid-wrap {
+    animation: fadeUp var(--dur-fast) var(--ease-out);
+}
+
+/* Today's row gets a whisper of tint */
+.dash-grid-table .tt-today-row th {
+    color: var(--accent);
+    position: relative;
+}
+.dash-grid-table .tt-today-row th::after {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 0 3px 3px 0;
+}
+.dash-grid-table .tt-today-row td { background: var(--accent-muted); }
+
+/* Live period cell */
+.dash-grid-table .tt-live-cell {
+    position: relative;
+    background: var(--bg-0) !important;
+    box-shadow: inset 0 0 0 2px var(--accent);
+    border-radius: 4px;
+}
+.tt-now-badge {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 1px 8px;
+    font-size: 0.6rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--bg-0);
+    background: var(--accent);
+    border-radius: var(--r-full);
+    animation: pulse 2s infinite;
+}
+
+/* Clickable timetable cells */
+.dash-grid-table .tt-click { cursor: pointer; }
+.dash-grid-table .tt-click:hover {
+    background: var(--accent-muted) !important;
+    box-shadow: inset 0 0 0 1px var(--border-hover);
+}
+
+/* ── Hero live-progress bar ── */
+.hero-progress {
+    margin-top: 12px;
+    height: 5px;
+    border-radius: var(--r-full);
+    background: var(--bg-2);
+    overflow: hidden;
+}
+.hero-progress-fill {
+    height: 100%;
+    border-radius: var(--r-full);
+    background: linear-gradient(90deg, var(--accent), var(--violet));
+    transition: width 600ms var(--ease-out);
+}
+.hero-progress-label {
+    margin-top: 4px;
+    font-size: 0.68rem;
+    font-family: var(--font-mono);
+    color: var(--text-3);
+    text-align: right;
+}
+
+/* ── Modernization: cards & stats ── */
+.stat-card {
+    position: relative;
+    overflow: hidden;
+    transition: border-color var(--dur-fast) ease,
+                box-shadow var(--dur-fast) ease,
+                transform var(--dur-fast) var(--ease-out);
+}
+.stat-card:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+.stat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(400px 80px at 50% -20%, var(--accent-muted), transparent 70%);
+    opacity: 0;
+    transition: opacity var(--dur-fast) ease;
+    pointer-events: none;
+}
+.stat-card:hover::before { opacity: 1; }
+
+.dash-hero-combined-card {
+    transition: box-shadow var(--dur-fast) ease, transform var(--dur-fast) var(--ease-out);
+}
+.dash-hero-combined-card:hover { box-shadow: var(--shadow-lg); }
+
+.hero-live-section, .hero-next-section {
+    border-radius: var(--r-md);
+    padding: 8px;
+    margin: -8px;
+    transition: background var(--dur-fast) ease;
+}
+.hero-live-section:hover, .hero-next-section:hover { background: var(--bg-1); }
+
+/* Chips: springier hover */
+.dash-chip {
+    transition: border-color var(--dur-fast) ease,
+                box-shadow var(--dur-fast) ease,
+                transform var(--dur-fast) var(--ease-spring);
+}
+.dash-chip:active { transform: scale(0.98); }
+
+/* Filter pills: subtle lift on active */
+.filter-pill { transition: all var(--dur-fast) var(--ease-out); }
+.filter-pill.active { box-shadow: var(--shadow-sm); }
+
+/* Fold buttons */
+.dash-info-dropdown-btn { transition: all var(--dur-fast) ease; }
+.dash-info-dropdown-btn:hover { border-color: var(--border-hover); box-shadow: var(--shadow-sm); }
+
+/* Priority items: smoother slide */
+.priority-item { transition: all var(--dur-fast) var(--ease-out); }
+.priority-item:hover { transform: translateX(3px); }
+
+@media (max-width: 640px) {
+    .tt-toolbar { flex-direction: column; align-items: flex-start; }
+    .tt-legend { flex-wrap: wrap; gap: var(--sp-3); }
+}
+
+
+
+
+/* ── Trust & polish: freshness pill + inline retry ─────────────── */
+.dash-updated-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: var(--sp-2);
+    padding: 3px 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text-3);
+    background: var(--bg-2);
+    border: 1px solid var(--bg-3);
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+}
+
+.retry-card { text-align: center; }
+.retry-card i { font-size: 1.6rem; color: var(--text-3); margin-bottom: var(--sp-3); }
+
+.retry-btn {
+    margin-top: var(--sp-4);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 18px;
+    border: 1px solid var(--bg-3);
+    border-radius: var(--r-md, 10px);
+    background: var(--bg-1);
+    color: var(--text-1);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s var(--ease-out);
+}
+.retry-btn:hover { background: var(--accent); color: var(--bg-0); border-color: var(--accent); }
+
+/* ── Mobile dashboard: compact, glanceable, one thumb ──────────── */
+@media (max-width: 640px) {
+    /* Stat cards: 3-across compact row instead of three stacked cards */
+    #stat-cards { grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
+    #stat-cards .stat-card { padding: var(--sp-3); border-radius: var(--r-md); }
+    #stat-cards .stat-label { font-size: 0.6rem; letter-spacing: 0.03em; }
+    #stat-cards .stat-value { font-size: 1.25rem; }
+    #stat-cards .stat-sub { font-size: 0.62rem; color: var(--text-3); }
+    #stat-cards .stat-sub i { display: none; }
+
+    /* Tighter vertical rhythm — the desktop gaps feel like dead space on a phone */
+    #section-dashboard .mt-6 { margin-top: var(--sp-4); }
+    #section-dashboard .mb-6 { margin-bottom: var(--sp-4); }
+    #section-dashboard .greeting h2 { font-size: 1.35rem; }
+    #section-dashboard .greeting p { font-size: 0.8rem; }
+
+    /* Priority strip items shrink to chips */
+    .priority-strip { gap: var(--sp-2); }
+    .priority-item { padding: 10px 12px; font-size: 0.78rem; }
+
+    /* Announcements: lighter cards */
+    #dashboard-announcements .card { padding: var(--sp-4); }
+
+    /* Section headers slightly smaller */
+    #section-dashboard .section-title { font-size: 1.05rem; }
+}
+
+
+/* ── Ambient background dots — sits behind everything ───────────── */
+.bg-dots {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ── Card / canvas separation ───────────────────────────────────────
+   Cards and the page were the exact same color — only the border did the
+   work. Shift the content canvas one tier down so white cards float on an
+   off-white field (and dark cards on near-black), plus a soft resting
+   shadow so every box reads as a real surface. */
+body { background: var(--bg-1); }
+.main-header { background: color-mix(in srgb, var(--bg-1) 80%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+
+.card, .stat-card, .dash-hero-combined-card, .module-card {
+    background: var(--bg-0);
+    box-shadow: var(--shadow-xs);
+}
+[data-theme="dark"] .card,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .dash-hero-combined-card,
+[data-theme="dark"] .module-card {
+    background: var(--bg-2); /* in dark mode lighter = closer, so cards rise above the page */
+}
+
+/* ── Dark theme craft pass ──────────────────────────────────────── */
+/* Hairline light along the top edge of raised surfaces — mimics an
+   overhead light source, the detail that makes dark UIs feel premium */
+[data-theme="dark"] .card,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .dash-hero-combined-card,
+[data-theme="dark"] .module-card {
+    border-color: rgba(255, 255, 255, 0.07);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045), var(--shadow-xs);
+}
+
+/* Very faint violet ambience bleeding from the top of the page, so the
+   background has depth instead of being one flat slab */
+[data-theme="dark"] body {
+    background:
+        radial-gradient(1200px 500px at 50% -10%, rgba(124, 88, 237, 0.055), transparent 65%),
+        var(--bg-1);
+}
+
+/* Sidebar melts into the page a bit more in dark */
+[data-theme="dark"] .sidebar { background: rgba(11, 11, 16, 0.6); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+
+/* Ambient dots get a violet tint in dark so they match the glow */
+
+/* Live and Up-Next are two completely separate cards — no shared box.
+   Live = warm card with red top edge; Next = clean card with accent edge. */
+.hero-live-section,
+.hero-next-section {
+    flex: 1;
+    min-width: 260px;
+    padding: var(--sp-5) !important;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+}
+.hero-live-section {
+    background:
+        linear-gradient(180deg, var(--danger-muted), transparent 55%),
+        var(--bg-0);
+    border-top: 3px solid var(--danger);
+}
+.hero-next-section {
+    background: var(--bg-0);
+    border-top: 3px solid var(--accent);
+}
+[data-theme="dark"] .hero-live-section,
+[data-theme="dark"] .hero-next-section { background-color: var(--bg-2); }
+.hero-live-section:hover, .hero-next-section:hover { box-shadow: var(--shadow-md); }
+.dash-hero-divider { display: none; }
+
+/* schedule sits flush under the date/updated pill */
+#dash-hero-cards.mt-6 { margin-top: 0; }
+
+/* ── Day timeline — rainbow bar for the whole college day ───────── */
+.day-timeline {
+    flex-basis: 100%;   /* full row of the #dash-hero-cards flex — sits above the card */
+    width: 100%;
+    margin: 0 0 var(--sp-1);
+    animation: fadeUp 0.4s var(--ease-out) both;
+}
+
+.day-tl-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    margin-bottom: 8px;
+}
+
+.day-tl-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.66rem;
+    color: var(--text-3);
+    letter-spacing: 0.03em;
+}
+
+.day-tl-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-2);
+}
+
+.day-tl-track {
+    position: relative;
+    height: 18px;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-2);
+}
+
+/* full-width rainbow, animated slow drift so it feels alive */
+.day-tl-rainbow {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg,
+        #F43F5E, #F97316, #FACC15, #22C55E, #06B6D4, #6366F1, #A855F7, #F43F5E);
+    background-size: 200% 100%;
+    animation: rainbowSlide 14s linear infinite;
+}
+
+@keyframes rainbowSlide {
+    from { background-position: 0% 0; }
+    to { background-position: 200% 0; }
+}
+
+/* covers the not-yet-reached part of the day — rainbow shows through faintly */
+.day-tl-veil {
+    position: absolute;
+    top: 0; bottom: 0; right: 0;
+    background: color-mix(in srgb, var(--bg-2) 88%, transparent);
+    backdrop-filter: saturate(0.4);
+}
+
+/* class boundary ticks */
+.day-tl-tick {
+    position: absolute;
+    top: 2px; bottom: 2px;
+    width: 2px;
+    background: color-mix(in srgb, var(--bg-0) 55%, transparent);
+    border-radius: 2px;
+}
+
+/* the "now" dot riding the edge of the fill */
+.day-tl-now {
+    position: absolute;
+    top: 50%;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid var(--text-1);
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 8px rgba(0,0,0,0.35);
+}
+
+/* ── Hero strip — today's classes as one scrollable row ─────────── */
+.hero-strip {
+    display: flex;
+    gap: var(--sp-4);            /* healthy gap between boxes */
+    overflow-x: auto;
+    padding: var(--sp-1) var(--sp-1) var(--sp-3);
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    width: 100%;
+}
+.hero-strip::-webkit-scrollbar { display: none; }
+
+.hero-slot-card {
+    flex: 0 0 auto;
+    width: 210px;                /* small, glanceable boxes */
+    padding: var(--sp-4);
+    border-radius: 16px;
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-xs);
+    cursor: pointer;
+    scroll-snap-align: center;
+    transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out), opacity 0.2s ease;
+}
+[data-theme="dark"] .hero-slot-card { background: var(--bg-2); }
+.hero-slot-card:hover { box-shadow: var(--shadow-md); }
+
+/* done classes fade back */
+.hero-slot-card.past {
+    opacity: 0.45;
+    filter: grayscale(0.6);
+    box-shadow: none;
+}
+.hero-slot-card.past:hover { opacity: 0.7; }
+
+/* the live one leads */
+.hero-slot-card.live {
+    border-top: 3px solid var(--danger);
+    background:
+        linear-gradient(180deg, var(--danger-muted), transparent 55%),
+        var(--bg-0);
+    width: 240px;
+    box-shadow: var(--shadow-sm);
+}
+[data-theme="dark"] .hero-slot-card.live {
+    background:
+        linear-gradient(180deg, var(--danger-muted), transparent 55%),
+        var(--bg-2);
+}
+
+.hero-slot-card.upcoming { border-top: 3px solid var(--accent); }
+
+.hero-slot-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    margin-bottom: 6px;
+}
+.hero-slot-card.live .hero-slot-tag { color: var(--danger); }
+.hero-slot-card.upcoming .hero-slot-tag { color: var(--accent); }
+
+.hero-slot-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--danger);
+    box-shadow: 0 0 8px var(--danger);
+    animation: pulse 2s infinite;
+}
+
+.hero-slot-subject {
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: var(--text-1);
+    line-height: 1.3;
+    margin-bottom: 6px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.hero-slot-meta {
+    font-size: 0.72rem;
+    color: var(--text-2);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.hero-slot-meta i { font-size: 0.62rem; color: var(--text-3); }
+
+.hero-slot-card.live .hero-progress { margin-top: 8px; }
+
+@media (max-width: 640px) {
+    .hero-slot-card { width: 180px; }
+    .hero-slot-card.live { width: 210px; }
 }

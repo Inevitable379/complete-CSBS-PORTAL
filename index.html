@@ -5,18 +5,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSBS Portal</title>
     <meta name="description" content="CSBS Student Portal — Course modules, assignments, schedule, and attendance">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@350;400;500;550;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@350;400;500;550;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"></noscript>
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="manifest" href="/static/manifest.json">
+    <meta name="theme-color" content="#171717">
+    <link rel="apple-touch-icon" href="/static/favicon.svg">
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/components.css">
     <script>
         // Prevent flash of wrong theme
         if (localStorage.getItem('theme') === 'dark') document.documentElement.dataset.theme = 'dark';
-        // Auth check — verify server session
-        fetch('/api/auth/check', { credentials: 'same-origin' })
-            .then(r => { if (!r.ok) window.location.href = '/login.html'; })
-            .catch(() => window.location.href = '/login.html');
+        // Auth check — verify server session (shared with main.js so we only hit it once)
+        window.__authCheck = fetch('/api/auth/check', { credentials: 'same-origin' })
+            .then(r => { if (r.status === 401 || r.status === 403) window.location.href = '/login.html'; return r; })
+            .catch(() => { /* offline — let the cached app render; sync happens when back online */ });
     </script>
 </head>
 <body>
@@ -61,9 +69,6 @@
                 </button>
             </div>
             <div class="sidebar-bottom">
-                <button class="sidebar-item" onclick="window.location.href='/ether'" title="Immersive 3D mode">
-                    <i class="fas fa-satellite"></i><span>Enter ETHER</span>
-                </button>
                 <button class="sidebar-item hidden" id="admin-link" onclick="window.location.href='/admin'">
                     <i class="fas fa-shield-halved"></i><span>Admin</span>
                 </button>
@@ -108,14 +113,27 @@
 
                     <!-- ===== DASHBOARD ===== -->
                     <section id="section-dashboard" class="page-section active">
-                        <div class="greeting fade-up">
-                            <h2 id="greeting-text">Good evening</h2>
-                            <p id="greeting-sub">Here's what's happening today</p>
+                        <div class="dash-top fade-up">
+                            <div class="greeting">
+                                <h2 id="greeting-text">Good evening</h2>
+                                <p id="greeting-sub">Here's what's happening today</p>
+                            </div>
+                            <div class="dash-sem-picker" id="dash-sem-picker">
+                                <button class="dash-sem-btn" id="dash-sem-btn" onclick="toggleDashSemMenu()">
+                                    <i class="fas fa-graduation-cap"></i>
+                                    <span id="dash-sem-label">Sem 3</span>
+                                    <i class="fas fa-chevron-down dash-sem-arrow"></i>
+                                </button>
+                                <div class="dash-sem-menu" id="dash-sem-menu"></div>
+                            </div>
                         </div>
+
+                        <div id="dash-hero-cards" class="stagger mt-6"></div>
+                        <div id="dash-today-section" class="stagger mt-6 mb-6"></div>
 
                         <div class="priority-strip stagger" id="priority-strip"></div>
 
-                        <div class="grid-4 stagger mb-6" id="stat-cards">
+                        <div class="grid-3 stagger mb-6" id="stat-cards">
                             <div class="stat-card" style="border-top:2px solid var(--success)">
                                 <span class="stat-label">Attendance</span>
                                 <span class="stat-value" id="stat-attendance">—</span>
@@ -126,11 +144,6 @@
                                 <span class="stat-value" id="stat-assignments">—</span>
                                 <span class="stat-sub" id="stat-assignments-sub">Loading...</span>
                             </div>
-                            <div class="stat-card" style="border-top:2px solid var(--accent)">
-                                <span class="stat-label">Courses</span>
-                                <span class="stat-value" id="stat-modules">—</span>
-                                <span class="stat-sub">This semester</span>
-                            </div>
                             <div class="stat-card" style="border-top:2px solid var(--danger)">
                                 <span class="stat-label">Next Exam</span>
                                 <span class="stat-value" id="stat-exam">—</span>
@@ -139,15 +152,12 @@
                         </div>
 
                         <div class="section-header mt-6">
-                            <h2 class="section-title">Today's Schedule</h2>
-                        </div>
-                        <div class="timeline stagger" id="today-timeline"></div>
-
-                        <div class="section-header mt-6">
                             <h2 class="section-title">Latest Announcements</h2>
                             <button class="btn-ghost" onclick="navigate('announcements')">View all <i class="fas fa-arrow-right"></i></button>
                         </div>
                         <div id="dashboard-announcements" class="flex-col gap-3 stagger"></div>
+
+                        <div id="dash-week-section" class="stagger mt-6 mb-6"></div>
                     </section>
 
                     <!-- ===== MODULES ===== -->
@@ -281,9 +291,7 @@
 
                         <!-- ── Timetable View ── -->
                         <div id="schedule-view-timetable" style="display:none">
-                            <div class="table-wrap">
-                                <table class="table" id="timetable"></table>
-                            </div>
+                            <div id="tt-tab-content"></div>
                         </div>
                     </section>
 
@@ -418,7 +426,7 @@
         </div>
     </div>
 
-    <script src="/static/js/main.js"></script>
+    <script src="/static/js/main.js" defer></script>
 
     <style>
         .page-section { display: none; opacity: 0; }
