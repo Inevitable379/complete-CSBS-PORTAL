@@ -10,7 +10,9 @@ const SCHEDULE_CSV = '/api/sheets/schedule';
 const ATTENDANCE_CSV = '/api/sheets/attendance';
 
 // State
-let currentSection = 'dashboard';
+// Start as null (not 'dashboard') so the first navigate('dashboard') on load
+// doesn't short-circuit on the same-section guard and skip loading data.
+let currentSection = null;
 let modulesData = [];
 let assignmentsData = [];
 let projectsData = [];

@@ -1,6 +1,6 @@
 /* CSBS Portal service worker — offline-capable, cache-first shell.
    Bump VERSION whenever static assets change to force an update. */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL_CACHE = `shell-${VERSION}`;
 const API_CACHE = `api-${VERSION}`;
 
